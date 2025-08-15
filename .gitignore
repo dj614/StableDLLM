@@ -1,0 +1,263 @@
+# ============================================================================
+# Python
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+*-env/
+mengni-*/
+
+# ============================================================================
+# Machine Learning & AI Models
+# ============================================================================
+# Model files
+*.bin
+*.ckpt
+*.h5
+*.hdf5
+*.pb
+*.pth
+*.pt
+*.pkl
+*.pickle
+*.joblib
+*.model
+*.safetensors
+*.onnx
+*.trt
+*.engine
+
+# Checkpoints and saves
+checkpoints/
+checkpoint*/
+save/
+saves/
+saved_models/
+models/*/
+**/models/*
+weights/
+*.weights
+
+# Training artifacts
+training_args.bin
+pytorch_model.bin
+tf_model.h5
+model.safetensors
+optimizer.pt
+scheduler.pt
+rng_state.pth
+wandb/
+tensorboard/
+logs/
+outputs/
+results/
+
+# ============================================================================
+# Logs and Outputs
+# ============================================================================
+# Log files
+*.log
+*.out
+*.err
+debug*.log
+output*.log
+slurm-*.out
+nohup.out
+
+# Output directories
+output/
+outputs/
+log/
+logs/
+temp/
+tmp/
+cache/
+.cache/
+
+# ============================================================================
+# Data and Datasets
+# ============================================================================
+# Large data files
+*.csv
+*.tsv
+*.json
+*.jsonl
+*.parquet
+*.feather
+*.hdf
+*.h5
+data/
+datasets/
+dataset/
+**/data/
+**/datasets/
+
+# ============================================================================
+# IDE and Editor files
+# ============================================================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+!**/examples/*.ipynb
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ============================================================================
+# System files
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# ============================================================================
+# Backup and temporary files
+# ============================================================================
+# Backup files
+*~
+*.backup
+*.old
+*.orig
+*.rej
+*.swp
+*.tmp
+
+# ============================================================================
+# GPU and CUDA files
+# ============================================================================
+*.cu
+*.cuh
+*.ptx
+*.cubin
+
+# ============================================================================
+# Configuration and secrets
+# ============================================================================
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+config.json
+secrets.json
+*.key
+*.pem
+*.p12
+*.pfx
+credentials.json
+
+# ============================================================================
+# Package manager files
+# ============================================================================
+# pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# conda
+*.conda
+
+# Model cache
+.cache/
+cache/
+huggingface/
+transformers_cache/
+
+# Experiment tracking
+wandb/
+mlruns/
+.mlflow/
+
+# Large binary files (>100MB)
+*.tar.gz
+*.zip
+*.rar
+*.7z

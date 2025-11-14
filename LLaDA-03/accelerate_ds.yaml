@@ -1,8 +1,0 @@
-compute_environment: LOCAL_MACHINE
-distributed_type: DEEPSPEED
-num_machines: 1
-num_processes: 1
-
-deepspeed_config:
-  deepspeed_config_file: /storage/v-mengnijia/LLaDA/deepspeed_stage2.json
-  zero3_init_flag: true

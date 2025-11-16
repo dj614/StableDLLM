@@ -176,7 +176,7 @@ def forward_process(
     noisy1[mask_here1] = MASK_TOKEN_ID
 
     noisy2 = None
-    if train_mode == "MirrorMask":
+    if train_mode in ["MirrorMask", "mirror_plus"]:
         noisy2 = batch_ids.clone()
         mask_here2 = (u > (1 - p_mask)) & eligible_pos
         noisy2[mask_here2] = MASK_TOKEN_ID
@@ -873,13 +873,8 @@ def train(args):
                 if not (has_mask1 or has_mask2):
                     continue
             elif args.train_mode == "mirror_plus":
-                use_two = (fixed_t < 0.5)
-                if use_two:
-                    if not (has_mask1 or has_mask2):
-                        continue
-                else:
-                    if not has_mask1:
-                        continue
+                if not (has_mask1 or has_mask2):
+                    continue
 
             if args.train_mode == "Normal":
                 # 只 noisy1
@@ -913,36 +908,41 @@ def train(args):
             elif args.train_mode == "mirror_plus":
                 # per-sample 判断是否使用两个方向
                 use_two_mask = (fixed_t < 0.5)          # [B] bool
-                B = ids.shape[0]
 
-                # noisy1 的 per-sample loss
-                loss1_scalar, loss1_per = batched_loss_for_backpropagate(
+                # 1) noisy1 的 per-sample loss：所有样本都要算
+                _, loss1_per = batched_loss_for_backpropagate(
                     ids, noisy1, model, p_mask, iw_t, eligible,
                     train=True, debug={}, pad_id=pad_id,
                     return_sample_losses=True,
                     loss_clip_max=getattr(args, "loss_max", None),
                     attn_mask=am
-                )  # loss1_per: [B]
+                )  # [B]
 
-                # noisy2 的 per-sample loss（如果需要）
+                # 2) noisy2 的 per-sample loss：只对 t_i < 0.5 的样本算
                 loss2_per = torch.zeros_like(loss1_per)
-                if noisy2 is not None:
-                    _, loss2_tmp = batched_loss_for_backpropagate(
-                        ids, noisy2, model, p_mask, iw_t, eligible,
+                if noisy2 is not None and use_two_mask.any():
+                    # 需要用两个 noisy 的样本下标
+                    idx_two = use_two_mask.nonzero(as_tuple=True)[0]  # [B_two]
+
+                    _, loss2_sub = batched_loss_for_backpropagate(
+                        ids[idx_two], noisy2[idx_two], model,
+                        p_mask[idx_two], iw_t[idx_two], eligible[idx_two],
                         train=True, debug={}, pad_id=pad_id,
                         return_sample_losses=True,
                         loss_clip_max=getattr(args, "loss_max", None),
-                        attn_mask=am
-                    )
-                    loss2_per = loss2_tmp
+                        attn_mask=am[idx_two]
+                    )  # [B_two]
 
-                # 按样本合成最终 loss_i
-                # 如果 t_i > 0.5：只 noisy1
-                # 如果 t_i < 0.5：平均 noisy1 & noisy2
+                    # 把子 batch 的 loss 填回到对应位置
+                    loss2_per[idx_two] = loss2_sub
+
+                # 3) 按样本合成最终 loss_i
+                #    如果 t_i < 0.5：平均 noisy1 & noisy2
+                #    如果 t_i >= 0.5：只用 noisy1
                 final_per_sample_loss = torch.where(
                     use_two_mask,
                     0.5 * (loss1_per + loss2_per),  # t < 0.5
-                    loss1_per                       # t > 0.5
+                    loss1_per                       # t >= 0.5
                 )
 
                 # batch loss = 所有样本 loss 的平均

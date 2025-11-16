@@ -46,7 +46,6 @@ def set_random_seed(seed: int, rank: int = 0):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
 def make_output_dir_and_broadcast(args, accelerator, gb):
     if accelerator.is_main_process and args.output_dir is None:
         args.output_dir = (

@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 
 accelerate launch \
-  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds.yaml \
+  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds_gsm8k.yaml \
   /storage/v-mengnijia/LLaDA/rebuttal.py \
   --seed 42 \
   --task gsm8k \
@@ -20,7 +20,7 @@ accelerate launch \
   --grad_accum 2
 
 accelerate launch \
-  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds.yaml \
+  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds_gsm8k.yaml \
   /storage/v-mengnijia/LLaDA/rebuttal.py \
   --seed 731 \
   --task gsm8k \
@@ -30,7 +30,7 @@ accelerate launch \
   --grad_accum 2
 
 accelerate launch \
-  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds.yaml \
+  --config_file /storage/v-mengnijia/LLaDA/accelerate_ds_gsm8k.yaml \
   /storage/v-mengnijia/LLaDA/rebuttal.py \
   --seed 20231 \
   --task gsm8k \

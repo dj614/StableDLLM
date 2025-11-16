@@ -46,7 +46,7 @@ def set_random_seed(seed: int, rank: int = 0):
 def make_output_dir_and_broadcast(args, accelerator, gb):
     if accelerator.is_main_process and args.output_dir is None:
         args.output_dir = (
-            f"./checkpoints/"
+            f"/root/workspace/checkpoints/"
             f"seed{args.seed}_{args.model}_{args.task}_"
             f"ppots_mirror_plus"
         )
@@ -1037,7 +1037,7 @@ def parse_args():
         args.eval_steps = args.save_steps
     
     if args.train_data_path is None:
-        args.train_data_path = f"data/train/{args.task}.jsonl"
+        args.train_data_path = f"/root/workspace/data/train/{args.task}.jsonl"
     return args
 
 

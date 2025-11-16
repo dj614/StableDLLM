@@ -49,7 +49,7 @@ def main():
     print("✓ 流式加载 nvidia/OpenScienceReasoning-2（不下载整个数据集）...")
     stream_ds = load_dataset(
         "nvidia/OpenScienceReasoning-2",
-        split=f"train[:{args.max_num}]",
+        split=f"train[:{args.max_num + 2000}]",
     )
 
     kept = 0

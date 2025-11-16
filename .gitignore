@@ -130,7 +130,6 @@ cache/
 # Large data files
 *.csv
 *.tsv
-*.json
 *.jsonl
 *.parquet
 *.feather

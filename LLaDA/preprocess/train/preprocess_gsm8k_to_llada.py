@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import argparse, json, sys, tqdm
+import argparse, json, tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
@@ -15,12 +15,13 @@ SPECIAL = dict(
 
 def enable_hf_mirror(use_china: bool):
     """
-    设置 HuggingFace 镜像，加速模型与数据集下载。
-    注意：from_pretrained() 必须保持使用原始 repo name，不可写完整 URL！
+    设置 HuggingFace 镜像，加速模型与数据集下载
     """
     if use_china:
         import os
         os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def encode_example(question, answer, tok):
     user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + question.strip() + "\n" + SPECIAL["EOT"]

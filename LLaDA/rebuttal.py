@@ -28,9 +28,14 @@ except AttributeError:
 MASK_TOKEN_ID = 126336
 
 def enable_hf_mirror(use_china: bool):
+    """
+    设置 HuggingFace 镜像，加速模型与数据集下载
+    """
     if use_china:
         import os
         os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def set_random_seed(seed: int, rank: int = 0):
     s = seed + rank

@@ -23,12 +23,13 @@ SPECIAL = dict(
 
 def enable_hf_mirror(use_china: bool):
     """
-    设置 HuggingFace 镜像，加速国内模型与数据集下载。
-    注意：模型名必须保持 repo_name，不允许写完整 URL！
+    设置 HuggingFace 镜像，加速模型与数据集下载
     """
     if use_china:
         import os
         os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def encode_example(ex, tok):
     prompt_txt = ex["input"]

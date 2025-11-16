@@ -18,8 +18,8 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 4
 
 accelerate launch \
   --config_file LLaDA/accelerate_ds.yaml \
@@ -29,8 +29,8 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 4
 
 accelerate launch \
   --config_file LLaDA/accelerate_ds.yaml \
@@ -40,5 +40,5 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 4

@@ -27,11 +27,10 @@ except AttributeError:
 
 MASK_TOKEN_ID = 126336
 
-def hf_url(model_name: str, use_china: bool):
+def enable_hf_mirror(use_china: bool):
     if use_china:
-        return f"https://hf-mirror.com/{model_name}"
-    else:
-        return model_name     # 让 transformers 默认去 huggingface.co
+        import os
+        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 def set_random_seed(seed: int, rank: int = 0):
     s = seed + rank
@@ -668,7 +667,8 @@ def train(args):
     gb = args.batch_size_per_gpu * args.grad_accum * accelerator.num_processes
 
     model_name = "GSAI-ML/LLaDA-8B-Instruct"
-    model_path = hf_url(model_name, args.china)
+    enable_hf_mirror(args.china)
+    model_path = model_name
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,

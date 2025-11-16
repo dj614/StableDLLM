@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 import argparse, json, sys, tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
@@ -10,16 +13,14 @@ SPECIAL = dict(
     EOT="<eot_id>",
 )
 
-def hf_url(model_name: str, use_china: bool):
-    if use_china:
-        return f"https://hf-mirror.com/{model_name}"
-    return model_name
-
-def load_hf_dataset(name: str, config: str, split: str, use_china: bool):
+def enable_hf_mirror(use_china: bool):
+    """
+    设置 HuggingFace 镜像，加速模型与数据集下载。
+    注意：from_pretrained() 必须保持使用原始 repo name，不可写完整 URL！
+    """
     if use_china:
         import os
         os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-    return load_dataset(name, config, split=split)
 
 def encode_example(question, answer, tok):
     user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + question.strip() + "\n" + SPECIAL["EOT"]
@@ -38,12 +39,18 @@ def main():
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
 
+    # 启用镜像（模型+数据集）
+    enable_hf_mirror(args.china)
+
     print("✓ 加载 tokenizer ...")
-    model_path = hf_url(args.model_path, args.china)
-    tok = AutoTokenizer.from_pretrained(model_path, use_fast=True, trust_remote_code=True)
+    tok = AutoTokenizer.from_pretrained(
+        args.model_path,
+        use_fast=True, 
+        trust_remote_code=True
+    )
 
     print(f"✓ 加载 GSM8K 数据集 split={args.split} ...")
-    dataset = load_hf_dataset("openai/gsm8k", "main", args.split, args.china)
+    dataset = load_dataset("openai/gsm8k", "main", split=args.split)
 
     with open(args.out_file, "w", encoding="utf8") as out_f:
         kept = 0

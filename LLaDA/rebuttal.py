@@ -761,7 +761,7 @@ def train(args):
             wi=wi, gi=gi, vi=vi, t_values=t_values,
             args=args,
             fit_mode=args.p_model,
-            plot=accelerator.is_main_process,
+            plot=False #accelerator.is_main_process,
         )
         end_time = time.time()
         accelerator.print("=== Experiment Config & Time ===")
@@ -1003,7 +1003,7 @@ def parse_args():
     ap.add_argument("--train_mode", type=str, choices=["Normal", "MirrorMask", "mirror_plus"], default="Normal")
     ap.add_argument("--IS_on_t", action="store_true")
     ap.add_argument("--p_model", type=str, choices=["insight_powerU"], default="insight_powerU", help="选择 p(t) 的参数化族")
-    ap.add_argument("--max_tokens_per_forward", type=int, default=100000)
+    ap.add_argument("--max_tokens_per_forward", type=int, default=60000)
     ap.add_argument("--max_is_weight", type=float, default=1e6)
     ap.add_argument("--n_starts", type=int, default=20)
     ap.add_argument("--num_samples_x0", type=int, default=10)

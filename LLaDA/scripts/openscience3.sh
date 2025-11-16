@@ -7,6 +7,7 @@ export NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_BLOCKING_WAIT=1
 export NCCL_TIMEOUT=1800
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 
 accelerate launch \

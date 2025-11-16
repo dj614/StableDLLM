@@ -692,14 +692,14 @@ def train(args):
 
     train_loader = DataLoader(
         train_ds,
-        batch_size_per_gpu=args.batch_size_per_gpu,
+        batch_size=args.batch_size_per_gpu,
         shuffle=True,
         drop_last=True,
         collate_fn=lambda x: collate_fn(x, pad_id)
     )
     eval_loader = DataLoader(
         eval_ds,
-        batch_size_per_gpu=args.batch_size_per_gpu,
+        batch_size=args.batch_size_per_gpu,
         shuffle=False,
         drop_last=False,
         collate_fn=lambda x: collate_fn(x, pad_id)

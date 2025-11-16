@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import os, sys
+
+if "--china" in sys.argv:
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+
 import argparse, json, math, time
 from typing import Callable, Dict, Optional, List, Tuple
 from dataclasses import dataclass
@@ -26,16 +33,6 @@ except AttributeError:
     _np_trapz = np.trapz       # older NumPy fallback
 
 MASK_TOKEN_ID = 126336
-
-def enable_hf_mirror(use_china: bool):
-    """
-    设置 HuggingFace 镜像，加速模型与数据集下载
-    """
-    if use_china:
-        import os
-        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def set_random_seed(seed: int, rank: int = 0):
     s = seed + rank
@@ -670,9 +667,7 @@ def train(args):
     device = accelerator.device
     gb = args.batch_size_per_gpu * args.grad_accum * accelerator.num_processes
 
-    model_name = "GSAI-ML/LLaDA-8B-Instruct"
-    enable_hf_mirror(args.china)
-    model_path = model_name
+    model_path = "GSAI-ML/LLaDA-8B-Instruct"
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,

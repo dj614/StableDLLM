@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import os, sys
+
+if "--china" in sys.argv:
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+
 import argparse, json, tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
+
 
 SPECIAL = dict(
     BOS="<s>",
@@ -12,16 +20,6 @@ SPECIAL = dict(
     START_ASSIST="<start_id>assistant<end_id>\n",
     EOT="<eot_id>",
 )
-
-def enable_hf_mirror(use_china: bool):
-    """
-    设置 HuggingFace 镜像，加速模型与数据集下载
-    """
-    if use_china:
-        import os
-        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def encode_example(question, answer, tok):
     user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + question.strip() + "\n" + SPECIAL["EOT"]
@@ -39,9 +37,6 @@ def main():
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
-
-    # 启用镜像（模型+数据集）
-    enable_hf_mirror(args.china)
 
     print("✓ 加载 tokenizer ...")
     tok = AutoTokenizer.from_pretrained(

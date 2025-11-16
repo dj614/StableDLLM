@@ -9,9 +9,17 @@
     python3 preprocess_openscience_to_llada.py
 """
 
+import os, sys
+
+if "--china" in sys.argv:
+    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
+    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+
 import argparse, json, tqdm
-from transformers import AutoTokenizer
 from datasets import load_dataset
+from transformers import AutoTokenizer
+
 
 SPECIAL = dict(
     BOS="<s>",
@@ -20,16 +28,6 @@ SPECIAL = dict(
     START_ASSIST="<start_id>assistant<end_id>\n",
     EOT="<eot_id>",
 )
-
-def enable_hf_mirror(use_china: bool):
-    """
-    设置 HuggingFace 镜像，加速模型与数据集下载
-    """
-    if use_china:
-        import os
-        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
-        os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 
 def encode_example(ex, tok):
     prompt_txt = ex["input"]
@@ -52,9 +50,6 @@ def main():
     ap.add_argument("--max_num", type=int, default=5000)
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
-
-    # 1. 启用镜像（模型 + 数据集）
-    enable_hf_mirror(args.china)
 
     # 2. 加载 tokenizer
     print("✓ 加载 tokenizer ...")

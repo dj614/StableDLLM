@@ -7,6 +7,10 @@
       "device": "cpu",
       "pin_memory": true
     },
+    "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+    },
     "allgather_partitions": true,
     "allgather_bucket_size": 200000000,
     "overlap_comm": true,

@@ -1,7 +1,7 @@
 compute_environment: LOCAL_MACHINE
 distributed_type: DEEPSPEED
 num_machines: 1
-num_processes: 2
+num_processes: 8
 
 deepspeed_config:
   deepspeed_config_file: LLaDA/deepspeed_stage2.json

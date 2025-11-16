@@ -27,6 +27,11 @@ except AttributeError:
 
 MASK_TOKEN_ID = 126336
 
+def hf_url(model_name: str, use_china: bool):
+    if use_china:
+        return f"https://hf-mirror.com/{model_name}"
+    else:
+        return model_name     # 让 transformers 默认去 huggingface.co
 
 def set_random_seed(seed: int, rank: int = 0):
     s = seed + rank
@@ -52,7 +57,7 @@ def make_output_dir_and_broadcast(args, accelerator, gb):
 
 
 # =========================
-# Dataset & Collate (统一)
+# Dataset & Collate
 # =========================
 
 class LLaDADataset(Dataset):
@@ -662,8 +667,11 @@ def train(args):
     device = accelerator.device
     gb = args.batch_size_per_gpu * args.grad_accum * accelerator.num_processes
 
+    model_name = "GSAI-ML/LLaDA-8B-Instruct"
+    model_path = hf_url(model_name, args.china)
+
     tokenizer = AutoTokenizer.from_pretrained(
-        "GSAI-ML/LLaDA-8B-Instruct",
+        model_path,
         padding_side="right",
         use_fast=True,
         trust_remote_code=True
@@ -700,7 +708,7 @@ def train(args):
 
     # model
     model = AutoModelForCausalLM.from_pretrained(
-        "GSAI-ML/LLaDA-8B-Instruct",
+        model_path,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16
     )
@@ -989,6 +997,7 @@ def train(args):
 
 def parse_args():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     ap.add_argument("--seed", type=int, required=True, help="全局随机种子")
     ap.add_argument("--task", type=str, choices=["openscience", "gsm8k", "hitab"], required=True)
     ap.add_argument("--model", type=str, choices=["llada"], default="llada")

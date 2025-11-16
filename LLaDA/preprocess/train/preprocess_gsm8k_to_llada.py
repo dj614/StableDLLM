@@ -1,24 +1,25 @@
-#!/usr/bin/env python
-# coding: utf-8
-"""
-把 GSM8K ➜ LLaDA SFT 所需格式
-------------------------------------------------
-输入:  Huggingface 的 openai/gsm8k main split
-输出:  JSONL 文件，每行包含 {"input_ids": [...], "prompt_length": int}
-用法:
-    python3 preprocess_gsm8k_to_llada.py
-"""
 import argparse, json, sys, tqdm
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
 SPECIAL = dict(
-    BOS="<s>",               # tokenizer.bos_token
-    EOS="</s>",              # tokenizer.eos_token
+    BOS="<s>",
+    EOS="</s>",
     START_USER="<start_id>user<end_id>\n",
     START_ASSIST="<start_id>assistant<end_id>\n",
-    EOT="<eot_id>",          # end-of-turn
+    EOT="<eot_id>",
 )
+
+def hf_url(model_name: str, use_china: bool):
+    if use_china:
+        return f"https://hf-mirror.com/{model_name}"
+    return model_name
+
+def load_hf_dataset(name: str, config: str, split: str, use_china: bool):
+    if use_china:
+        import os
+        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    return load_dataset(name, config, split=split)
 
 def encode_example(question, answer, tok):
     user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + question.strip() + "\n" + SPECIAL["EOT"]
@@ -34,13 +35,15 @@ def main():
     ap.add_argument("--out_file", type=str, default="data/train/gsm8k.jsonl")
     ap.add_argument("--split", type=str, default="train", choices=["train", "test"])
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
+    ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
 
     print("✓ 加载 tokenizer ...")
-    tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True, trust_remote_code=True)
+    model_path = hf_url(args.model_path, args.china)
+    tok = AutoTokenizer.from_pretrained(model_path, use_fast=True, trust_remote_code=True)
 
     print(f"✓ 加载 GSM8K 数据集 split={args.split} ...")
-    dataset = load_dataset("openai/gsm8k", "main", split=args.split)
+    dataset = load_hf_dataset("openai/gsm8k", "main", args.split, args.china)
 
     with open(args.out_file, "w", encoding="utf8") as out_f:
         kept = 0

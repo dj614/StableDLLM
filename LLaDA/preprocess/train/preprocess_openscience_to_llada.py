@@ -21,6 +21,19 @@ SPECIAL = dict(
     EOT="<eot_id>",
 )
 
+def hf_url(model_name: str, use_china: bool):
+    """根据国内/国外选择 HF 模型下载地址"""
+    if use_china:
+        return f"https://hf-mirror.com/{model_name}"
+    return model_name
+
+def load_hf_dataset(name: str, split: str, use_china: bool):
+    """数据集同样支持国内镜像"""
+    if use_china:
+        import os
+        os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+    return load_dataset(name, split=split)
+
 def encode_example(ex, tok):
     prompt_txt = ex["input"]
     answer_txt = ex["output"]
@@ -47,20 +60,25 @@ def main():
     ap.add_argument("--max_num",
                     type=int,
                     default=5000)
+    ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
 
-    # 1. 加载 tokenizer
+    # 1. tok 走镜像
+    model_path = hf_url(args.model_path, args.china)
+    print("✓ 加载 tokenizer ...")
     tok = AutoTokenizer.from_pretrained(
-        args.model_path, use_fast=True, trust_remote_code=True
+        model_path, use_fast=True, trust_remote_code=True
     )
 
-    # 2. 下载 HF 官方 openscience 数据
-    dataset = load_dataset("nvidia/OpenScience", split="train")
+    # 2. 数据集走镜像
+    print("✓ 加载 nvidia/OpenScience 数据集 ...")
+    dataset = load_hf_dataset("nvidia/OpenScience", split="train", use_china=args.china)
 
     # 3. 取前 max_num 条
     dataset = dataset.select(range(args.max_num))
 
     # 4. 写出
+    print(f"✓ 转换中，最多 {args.max_num} 条 ...")
     out_f = open(args.out_file, "w", encoding="utf8")
     kept = 0
 
@@ -70,7 +88,7 @@ def main():
         kept += 1
 
     out_f.close()
-    print(f"✓ 完成: 写入 {kept} 条")
+    print(f"✓ 完成: 写入 {kept} 条到 {args.out_file}")
 
 
 if __name__ == "__main__":

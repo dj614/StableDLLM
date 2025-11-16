@@ -21,7 +21,7 @@ TEMP             = 0.
 GEN_LENGTH       = 128
 STEPS            = 128
 BLOCK_LENGTH     = 32
-BASE_OUTPUT      = Path("LLaDA/eval/data")
+BASE_OUTPUT      = Path("/root/workspace/data/eval")
 suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
 OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_gsm8k_128_128_32.jsonl"
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

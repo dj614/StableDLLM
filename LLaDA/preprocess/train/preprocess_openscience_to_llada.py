@@ -36,7 +36,7 @@ def main():
     ap.add_argument("--out_file", type=str, default="/root/workspace/data/train/openscience.jsonl")
     ap.add_argument("--model_path", type=str, default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--max_num", type=int, default=5000)
-    ap.add_argument("--max_len", type=int, default=4096)
+    ap.add_argument("--max_len", type=int, default=8192)
     ap.add_argument("--china", action="store_true")
     args = ap.parse_args()
 
@@ -49,7 +49,7 @@ def main():
     print("✓ 流式加载 nvidia/OpenScienceReasoning-2（不下载整个数据集）...")
     stream_ds = load_dataset(
         "nvidia/OpenScienceReasoning-2",
-        split=f"train[:{args.max_num * 2}]",
+        split=f"train[:{args.max_num}]",
     )
 
     kept = 0

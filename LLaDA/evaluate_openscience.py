@@ -13,7 +13,7 @@ device           = torch.device("cuda:0")
 
 # ----------- 不需要修改的超参 ----------
 MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
-DATASET_NAME     = "nvidia/OpenScience"
+DATASET_NAME     = "nvidia/OpenScienceReasoning-2"
 SPLIT            = "train"     # openscience 本身无 test
 START_INDEX      = 5000        # 第 5001 条（0-based）
 END_INDEX        = 6000        # 第 6000 条（不含）
@@ -22,7 +22,7 @@ TEMP             = 0.
 GEN_LENGTH       = 256
 STEPS            = 256
 BLOCK_LENGTH     = 256
-BASE_OUTPUT      = Path("LLaDA/eval/data")
+BASE_OUTPUT      = Path("/root/workspace/data/eval")
 suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
 OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_openscience_256_256_256.jsonl"
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)

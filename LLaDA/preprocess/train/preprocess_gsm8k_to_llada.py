@@ -38,6 +38,8 @@ def main():
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
 
+    os.makedirs(os.path.dirname(args.out_file), exist_ok=True)
+
     print("✓ 加载 tokenizer ...")
     tok = AutoTokenizer.from_pretrained(
         args.model_path,

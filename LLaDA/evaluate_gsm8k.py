@@ -9,14 +9,14 @@ from generate import generate
 
 # ------------ 可修改的超参 ------------
 CHECKPOINT_PATH  = ""
-device           = torch.device("cuda:0")
+DEVICE_IDS       = [0,1,2,3,4]
 
 # ----------- 不需要修改的超参 ----------
+BATCH_SIZE       = 16
 MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
 DATASET_NAME     = "openai/gsm8k"
 DATASET_CONFIG   = "main"
 SPLIT            = "test"
-BATCH_SIZE       = 16
 TEMP             = 0.
 GEN_LENGTH       = 128
 STEPS            = 128
@@ -26,56 +26,64 @@ suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
 OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_gsm8k_128_128_32.jsonl"
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-# 解析标准答案：从 "#### 18" 提取数字 18
+# ================= 工具函数 =================
 def extract_gold_answer(answer_text):
     m = re.search(r"####\s*([-+]?\d+)", answer_text)
-    if m:
-        return m.group(1).strip()
-    return None
+    return m.group(1).strip() if m else None
 
-# 解析模型预测答案：从生成内容中提取第一个整数
 def extract_pred_answer(pred_text):
     m = re.search(r"####\s*([-+]?\d+)", pred_text)
-    if m:
-        return m.group(1).strip()
-    return None   # 严格模式：解析不出 → 算错
+    return m.group(1).strip() if m else None
 
-# 1. 加载 tokenizer / model
+# ================= 1. 加载模型 =================
 load_path = CHECKPOINT_PATH if CHECKPOINT_PATH else MODEL_NAME
-tokenizer = AutoTokenizer.from_pretrained("GSAI-ML/LLaDA-8B-Instruct", trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(load_path, trust_remote_code=True, torch_dtype="auto")
-model.eval().to(device)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 
-# 2. 加载 GSM8K 数据集
+print(f"Loading model on GPUs: {DEVICE_IDS} ...")
+base_model = AutoModelForCausalLM.from_pretrained(
+    load_path,
+    trust_remote_code=True,
+    torch_dtype="auto",
+)
+
+# 包装成 DataParallel
+model = torch.nn.DataParallel(base_model, device_ids=DEVICE_IDS)
+model.eval().cuda()
+
+# ================= 2. 加载数据 =================
 dataset = load_dataset(DATASET_NAME, DATASET_CONFIG, split=SPLIT)
 progress = tqdm(total=len(dataset), desc="Samples", unit="example")
 
 correct = 0
 total = 0
 
-# 3. 推理 + 保存
+# ================= 3. 推理 + 保存 =================
 with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
     for i in range(0, len(dataset), BATCH_SIZE):
-        batch = dataset[i: i + BATCH_SIZE]
+
+        batch = dataset[i : i + BATCH_SIZE]
         batch_items = [dict(zip(batch.keys(), values)) for values in zip(*batch.values())]
 
+        # ====== 构造 batch prompts ======
+        prompts = []
         for item in batch_items:
-            question = item["question"]
-            gold_answer_text = item["answer"]
-            gold_answer = extract_gold_answer(gold_answer_text)
+            q = item["question"]
+            msgs = [{"role": "user", "content": q}]
+            prompt = tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
+            prompts.append(prompt)
 
-            # 构建 prompt
-            m = [{"role": "user", "content": question}]
-            prompt = tokenizer.apply_chat_template(
-                m, add_generation_prompt=True, tokenize=False
-            )
-            input_ids = tokenizer(prompt)["input_ids"]
-            input_ids = torch.tensor(input_ids).to(device).unsqueeze(0)
+        # ====== tokenize batch ======
+        encoded = tokenizer(
+            prompts,
+            padding=True,
+            return_tensors="pt"
+        ).to("cuda")
 
-            # 推理
+        # ====== 多卡推理 ======
+        with torch.no_grad():
             out = generate(
                 model,
-                input_ids,
+                encoded["input_ids"],
                 steps=STEPS,
                 gen_length=GEN_LENGTH,
                 block_length=BLOCK_LENGTH,
@@ -83,23 +91,29 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
                 cfg_scale=0.,
                 remasking="low_confidence"
             )
-            pred_text = tokenizer.batch_decode(
-                out[:, input_ids.shape[1]:],
-                skip_special_tokens=True
-            )[0]
 
+        # 生成内容
+        decoded = tokenizer.batch_decode(
+            out[:, encoded["input_ids"].shape[1]:],
+            skip_special_tokens=True
+        )
+
+        # ====== 逐条处理结果 ======
+        for item, pred_text in zip(batch_items, decoded):
+
+            gold_raw = item["answer"]
+            gold_answer = extract_gold_answer(gold_raw)
             pred_answer = extract_pred_answer(pred_text)
 
-            # 严格模式：无法解析 or 不相等 → 错
             is_correct = (gold_answer is not None) and (pred_answer == gold_answer)
 
             total += 1
             correct += int(is_correct)
 
             fout.write(json.dumps({
-                "question": question,
+                "question": item["question"],
                 "gold_answer": gold_answer,
-                "gold_raw": gold_answer_text,
+                "gold_raw": gold_raw,
                 "prediction": pred_text,
                 "pred_answer": pred_answer,
                 "correct": is_correct

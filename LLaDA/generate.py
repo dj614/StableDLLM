@@ -60,7 +60,7 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
     else:
         attention_bias = None
     batch_size = prompt.shape[0]
-    x = torch.full((batch_size, prompt.shape[1] + gen_length), mask_id, dtype=torch.long).to(model.device)
+    x = torch.full((batch_size, prompt.shape[1] + gen_length), mask_id, dtype=torch.long).to(prompt.device)
     x[:, :prompt.shape[1]] = prompt.clone()
 
     prompt_index = (x != mask_id)

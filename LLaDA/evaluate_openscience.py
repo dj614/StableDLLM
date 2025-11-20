@@ -3,13 +3,20 @@ from pathlib import Path
 import json
 import re
 import torch
+import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from datasets import load_dataset
 from generate import generate
 
+# ------------ 解析命令行参数 ------------
+parser = argparse.ArgumentParser()
+parser.add_argument("--checkpoint_path", type=str, default="", help="path to finetuned checkpoint (optional)")
+parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7], help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
+args = parser.parse_args()
+
 # ------------ 可修改的超参 ------------
-CHECKPOINT_PATH  = ""
-DEVICE_IDS       = [0,1,2,3,4]
+CHECKPOINT_PATH  = args.checkpoint_path
+DEVICE_IDS       = args.device_ids
 
 # ----------- 不需要修改的超参 ----------
 BATCH_SIZE       = 4

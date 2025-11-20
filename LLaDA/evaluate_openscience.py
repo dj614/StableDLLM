@@ -20,7 +20,7 @@ CHECKPOINT_PATH  = args.checkpoint_path
 DEVICE_IDS       = args.device_ids
 
 # ----------- 不需要修改的超参 ----------
-BATCH_SIZE       = 4
+BATCH_SIZE       = 8
 MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
 DATASET_NAME     = "nvidia/OpenScienceReasoning-2"
 SPLIT            = "train"

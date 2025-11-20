@@ -82,16 +82,32 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
 
         # ====== 多卡推理 ======
         with torch.no_grad():
-            out = generate(
-                model,
-                encoded["input_ids"],
-                steps=STEPS,
-                gen_length=GEN_LENGTH,
-                block_length=BLOCK_LENGTH,
-                temperature=TEMP,
-                cfg_scale=0.,
-                remasking="low_confidence"
-            )
+            curr_bs = encoded["input_ids"].size(0)
+            n_gpus = len(DEVICE_IDS)
+            if curr_bs < n_gpus:
+                # 最后一个小 batch：不用 DataParallel，单卡跑
+                out = generate(
+                    model.module,  # 取出真实模型
+                    encoded["input_ids"].to("cuda:0"),
+                    steps=STEPS,
+                    gen_length=GEN_LENGTH,
+                    block_length=BLOCK_LENGTH,
+                    temperature=TEMP,
+                    cfg_scale=0.,
+                    remasking="low_confidence"
+                )
+            else:
+                # 正常 batch：多卡 DP 跑
+                out = generate(
+                    model,
+                    encoded["input_ids"],
+                    steps=STEPS,
+                    gen_length=GEN_LENGTH,
+                    block_length=BLOCK_LENGTH,
+                    temperature=TEMP,
+                    cfg_scale=0.,
+                    remasking="low_confidence"
+                )
 
         decoded = tokenizer.batch_decode(
             out[:, encoded["input_ids"].shape[1]:],

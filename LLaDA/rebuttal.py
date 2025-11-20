@@ -907,7 +907,7 @@ def train(args):
 
             elif args.train_mode == "mirror_plus":
                 # per-sample 判断是否使用两个方向
-                use_two_mask = (fixed_t < 0.5)          # [B] bool
+                use_two_mask = (fixed_t < 0.9)          # [B] bool
 
                 # 1) noisy1 的 per-sample loss：所有样本都要算
                 _, loss1_per = batched_loss_for_backpropagate(
@@ -918,7 +918,7 @@ def train(args):
                     attn_mask=am
                 )  # [B]
 
-                # 2) noisy2 的 per-sample loss：只对 t_i < 0.5 的样本算
+                # 2) noisy2 的 per-sample loss：只对 t_i < 0.9 的样本算
                 loss2_per = torch.zeros_like(loss1_per)
                 if noisy2 is not None and use_two_mask.any():
                     # 需要用两个 noisy 的样本下标
@@ -937,12 +937,12 @@ def train(args):
                     loss2_per[idx_two] = loss2_sub
 
                 # 3) 按样本合成最终 loss_i
-                #    如果 t_i < 0.5：平均 noisy1 & noisy2
-                #    如果 t_i >= 0.5：只用 noisy1
+                #    如果 t_i < 0.9：平均 noisy1 & noisy2
+                #    如果 t_i >= 0.9：只用 noisy1
                 final_per_sample_loss = torch.where(
                     use_two_mask,
-                    0.5 * (loss1_per + loss2_per),  # t < 0.5
-                    loss1_per                       # t >= 0.5
+                    0.5 * (loss1_per + loss2_per),  # t < 0.9
+                    loss1_per                       # t >= 0.9
                 )
 
                 # batch loss = 所有样本 loss 的平均

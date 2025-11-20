@@ -761,7 +761,7 @@ def train(args):
             wi=wi, gi=gi, vi=vi, t_values=t_values,
             args=args,
             fit_mode=args.p_model,
-            plot=accelerator.is_main_process,
+            plot=False #accelerator.is_main_process,
         )
         end_time = time.time()
         accelerator.print("=== Experiment Config & Time ===")

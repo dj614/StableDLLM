@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 
 # ========== 环境变量 ==========
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 export TORCH_NCCL_TRACE_BUFFER_SIZE=16777216
 export NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_BLOCKING_WAIT=1
 export NCCL_TIMEOUT=1800
 export CUBLAS_WORKSPACE_CONFIG=:4096:8
+export PYTORCH_ALLOC_CONF=expandable_segments:True
 
 
 accelerate launch \
@@ -17,8 +18,8 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 1
 
 accelerate launch \
   --config_file LLaDA/accelerate_ds.yaml \
@@ -28,8 +29,8 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 1
 
 accelerate launch \
   --config_file LLaDA/accelerate_ds.yaml \
@@ -39,5 +40,5 @@ accelerate launch \
   --task gsm8k \
   --train_mode mirror_plus \
   --IS_on_t \
-  --batch_size_per_gpu 8 \
-  --grad_accum 2
+  --batch_size_per_gpu 4 \
+  --grad_accum 1

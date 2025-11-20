@@ -1,4 +1,4 @@
-from tqdm.auto import tqdm 
+from tqdm.auto import tqdm
 from pathlib import Path
 import json
 import re
@@ -11,7 +11,8 @@ from generate import generate
 # ------------ 解析命令行参数 ------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint_path", type=str, default="", help="path to finetuned checkpoint (optional)")
-parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7], help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
+parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7],
+                    help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
 args = parser.parse_args()
 
 # ------------ 可修改的超参 ------------
@@ -36,17 +37,15 @@ OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # ============== 工具函数 ======================
 def extract_boxed_answer(text):
+    # 匹配 \boxed{...}
+    if not isinstance(text, str):
+        return None
     m = re.search(r"\\boxed\{([A-Za-z0-9\+\-\.\, ]+)\}", text)
-    return m.group(1).strip() if m else None
-
-def extract_pred_answer(pred):
-    m = re.search(r"\\boxed\{([A-Za-z0-9\+\-\.\, ]+)\}", pred)
     return m.group(1).strip() if m else None
 
 # ============== 1. 加载 tokenizer / model ======================
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
 
-# 让模型自动分布到多个 GPU
 print(f"Loading model on GPUs: {DEVICE_IDS} ...")
 base_model = AutoModelForCausalLM.from_pretrained(
     CHECKPOINT_PATH,
@@ -54,7 +53,6 @@ base_model = AutoModelForCausalLM.from_pretrained(
     torch_dtype="auto"
 )
 
-# DataParallel 包裹
 model = torch.nn.DataParallel(base_model, device_ids=DEVICE_IDS)
 model.eval().cuda()
 
@@ -71,12 +69,15 @@ total = 0
 # ============== 3. 推理 ======================
 with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
     for i in range(0, len(dataset), BATCH_SIZE):
-        batch = dataset[i : i + BATCH_SIZE]
+        batch = dataset[i : i + BATCH_SIZE]   # 注意：这里 batch 是 dict of lists
+
+        inputs = batch["input"]
+        outputs = batch["output"]
 
         # ======= 构造 batch 输入 =======
         prompts = []
-        for item in batch:
-            m = [{"role": "user", "content": item["input"]}]
+        for inp in inputs:
+            m = [{"role": "user", "content": inp}]
             p = tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
             prompts.append(p)
 
@@ -101,18 +102,16 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
         )
 
         # ======= 处理 batch 内每个样本 =======
-        for item, pred_text in zip(batch, decoded):
-
-            gold_cot_output = item["output"]
+        for inp, gold_cot_output, pred_text in zip(inputs, outputs, decoded):
             gold_answer = extract_boxed_answer(gold_cot_output)
-            pred_answer = extract_pred_answer(pred_text)
+            pred_answer = extract_boxed_answer(pred_text)
 
             is_correct = (gold_answer == pred_answer)
             total += 1
             correct += int(is_correct)
 
             fout.write(json.dumps({
-                "input": item["input"],
+                "input": inp,
                 "gold_output": gold_cot_output,
                 "gold_answer": gold_answer,
                 "prediction": pred_text,
@@ -123,6 +122,6 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
             progress.update(1)
 
 progress.close()
-acc = correct / total
+acc = correct / total if total > 0 else 0
 print(f"✔ 完成推理！共 {total} 条，正确 {correct} 条，Accuracy = {acc:.4f}")
 print(f"✔ 结果已保存至：{OUTPUT_PATH}")

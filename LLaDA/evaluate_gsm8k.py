@@ -11,7 +11,8 @@ from generate import generate
 # ------------ 解析命令行参数 ------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--checkpoint_path", type=str, default="", help="path to finetuned checkpoint (optional)")
-parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7], help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
+parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7],
+                    help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
 args = parser.parse_args()
 
 # ------------ 可修改的超参 ------------
@@ -29,22 +30,21 @@ GEN_LENGTH       = 128
 STEPS            = 128
 BLOCK_LENGTH     = 32
 BASE_OUTPUT      = Path("/root/workspace/data/eval")
-suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
+suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:]) if CHECKPOINT_PATH else Path("base")
 OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_gsm8k_128_128_32.jsonl"
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # ================= 工具函数 =================
-def extract_gold_answer(answer_text):
-    m = re.search(r"####\s*([-+]?\d+)", answer_text)
-    return m.group(1).strip() if m else None
-
-def extract_pred_answer(pred_text):
-    m = re.search(r"####\s*([-+]?\d+)", pred_text)
+def extract_hash_answer(text):
+    """提取 #### 后的整数答案"""
+    if not isinstance(text, str):
+        return None
+    m = re.search(r"####\s*([-+]?\d+)", text)
     return m.group(1).strip() if m else None
 
 # ================= 1. 加载模型 =================
 load_path = CHECKPOINT_PATH if CHECKPOINT_PATH else MODEL_NAME
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True)
 
 print(f"Loading model on GPUs: {DEVICE_IDS} ...")
 base_model = AutoModelForCausalLM.from_pretrained(
@@ -53,7 +53,6 @@ base_model = AutoModelForCausalLM.from_pretrained(
     torch_dtype="auto",
 )
 
-# 包装成 DataParallel
 model = torch.nn.DataParallel(base_model, device_ids=DEVICE_IDS)
 model.eval().cuda()
 
@@ -67,24 +66,19 @@ total = 0
 # ================= 3. 推理 + 保存 =================
 with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
     for i in range(0, len(dataset), BATCH_SIZE):
-
-        batch = dataset[i : i + BATCH_SIZE]
-        batch_items = [dict(zip(batch.keys(), values)) for values in zip(*batch.values())]
+        batch = dataset[i : i + BATCH_SIZE]  # dict of lists
+        questions = batch["question"]
+        gold_raws = batch["answer"]
 
         # ====== 构造 batch prompts ======
         prompts = []
-        for item in batch_items:
-            q = item["question"]
+        for q in questions:
             msgs = [{"role": "user", "content": q}]
             prompt = tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
             prompts.append(prompt)
 
         # ====== tokenize batch ======
-        encoded = tokenizer(
-            prompts,
-            padding=True,
-            return_tensors="pt"
-        ).to("cuda")
+        encoded = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
 
         # ====== 多卡推理 ======
         with torch.no_grad():
@@ -99,26 +93,24 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
                 remasking="low_confidence"
             )
 
-        # 生成内容
         decoded = tokenizer.batch_decode(
             out[:, encoded["input_ids"].shape[1]:],
             skip_special_tokens=True
         )
 
         # ====== 逐条处理结果 ======
-        for item, pred_text in zip(batch_items, decoded):
+        for q, gold_raw, pred_text in zip(questions, gold_raws, decoded):
+            gold_answer = extract_hash_answer(gold_raw)
+            pred_answer = extract_hash_answer(pred_text)
 
-            gold_raw = item["answer"]
-            gold_answer = extract_gold_answer(gold_raw)
-            pred_answer = extract_pred_answer(pred_text)
-
+            # pred 提取不到 => 直接错；gold 提取不到也判错（按你原逻辑）
             is_correct = (gold_answer is not None) and (pred_answer == gold_answer)
 
             total += 1
             correct += int(is_correct)
 
             fout.write(json.dumps({
-                "question": item["question"],
+                "question": q,
                 "gold_answer": gold_answer,
                 "gold_raw": gold_raw,
                 "prediction": pred_text,
@@ -129,7 +121,6 @@ with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
             progress.update(1)
 
 progress.close()
-
-acc = correct / total
+acc = correct / total if total > 0 else 0
 print(f"✔ 评测完成，共 {total} 条，正确 {correct} 条，Accuracy = {acc:.4f}")
 print(f"✔ 结果已保存到 {OUTPUT_PATH}")

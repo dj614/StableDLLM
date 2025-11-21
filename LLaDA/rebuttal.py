@@ -952,7 +952,7 @@ def train(args):
 
             if accelerator.is_main_process and update_step % args.logging_steps == 0:
                 wandb.log({
-                    "train/loss": loss.item(),
+                    "train/loss": loss.detach().item(),
                     "train/lr": scheduler.get_last_lr()[-1],
                     "train/sec": (time.time() - start) / args.logging_steps
                 }, step=update_step)

@@ -103,7 +103,7 @@ def train(args):
 
     # wandb init
     if accelerator.is_main_process:
-        wandb.init(project=f"llada_mirror_plus_{args.task}", config=vars(args))
+        wandb.init(project=f"llada_{args.task}", config=vars(args))
     accelerator.print(
         f"◎ 全局 batch = {args.batch_size_per_gpu} × grad_accum {args.grad_accum} × "
         f"processes {accelerator.num_processes} = {gb}"
@@ -114,7 +114,7 @@ def train(args):
     output_dir = make_output_dir_and_broadcast(args, accelerator)
 
     # importance sampling over t
-    if args.IS_on_t:
+    if args.PPOTS:
         model.eval()
         start_time = time.time()
         wi, gi, vi, t_values = evaluate_over_x0(
@@ -184,7 +184,7 @@ def train(args):
 
                 fixed_t = torch.rand(eids.shape[0], device=device)
                 iw_t = torch.ones(eids.shape[0], device=device)
-                if args.IS_on_t:
+                if args.PPOTS:
                     fixed_t, iw_t = sample_t_from_p(eids.shape[0])
 
                 p_mask, iw_t, noisy1, _, eligible = forward_process(
@@ -241,7 +241,7 @@ def train(args):
 
             fixed_t = torch.rand(ids.shape[0], device=device)
             iw_t = torch.ones(ids.shape[0], device=device)
-            if args.IS_on_t:
+            if args.PPOTS:
                 fixed_t, iw_t = sample_t_from_p(ids.shape[0])
 
             p_mask, iw_t, noisy1, noisy2, eligible = forward_process(
@@ -258,7 +258,7 @@ def train(args):
             if args.train_mode == "Normal":
                 if not has_mask1:
                     continue
-            elif args.train_mode in ["MirrorMask", "mirror_plus"]:
+            elif args.train_mode in ["MIRROR"]:
                 if not (has_mask1 or has_mask2):
                     continue
 
@@ -278,7 +278,7 @@ def train(args):
                     attn_mask=am,
                 )
 
-            elif args.train_mode == "MirrorMask":
+            elif args.train_mode == "MIRROR":
                 loss1 = batched_loss_for_backpropagate(
                     ids,
                     noisy1,

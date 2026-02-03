@@ -13,11 +13,16 @@ def make_output_dir_and_broadcast(args, accelerator) -> Path:
     Keeps the same default naming scheme as the original script.
     """
     if accelerator.is_main_process and args.output_dir is None:
-        args.output_dir = (
-            f"/root/workspace/checkpoints/"
-            f"seed{args.seed}_{args.model}_{args.task}_"
-            f"ppots_mirror_plus"
-        )
+        if args.PPOTS:
+            args.output_dir = (
+                f"/root/workspace/checkpoints/"
+                f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}_PPOTS"
+            )
+        else:
+            args.output_dir = (
+                f"/root/workspace/checkpoints/"
+                f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}"
+            )
     args.output_dir = broadcast_object_list([args.output_dir])[0]
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

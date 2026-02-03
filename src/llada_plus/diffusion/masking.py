@@ -27,7 +27,7 @@ def forward_process(
       - we never noise prompt tokens (labels == -100) or padding tokens (attention_mask == 0)
       - p_mask = (1-eps)*t + eps, broadcast to sequence length
       - Normal mode returns only noisy1
-      - MirrorMask/mirror_plus also returns a mirrored noisy2
+      - MIRROR also returns a mirrored noisy2
     """
     B, L = batch_ids.shape
     device = batch_ids.device
@@ -44,7 +44,7 @@ def forward_process(
     noisy1[mask_here1] = MASK_TOKEN_ID
 
     noisy2: Optional[torch.Tensor] = None
-    if train_mode in ["MirrorMask", "mirror_plus"]:
+    if train_mode in ["MIRROR"]:
         noisy2 = batch_ids.clone()
         mask_here2 = (u > (1 - p_mask)) & eligible_pos
         noisy2[mask_here2] = MASK_TOKEN_ID

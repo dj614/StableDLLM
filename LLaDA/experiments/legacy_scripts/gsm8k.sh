@@ -15,8 +15,8 @@ accelerate launch \
   LLaDA/rebuttal.py \
   --seed 42 \
   --task gsm8k \
-  --train_mode mirror_plus \
-  --IS_on_t \
+  --train_mode MIRROR \
+  --PPOTS \
   --batch_size_per_gpu 8 \
   --grad_accum 2
 
@@ -26,8 +26,8 @@ accelerate launch \
   LLaDA/rebuttal.py \
   --seed 731 \
   --task gsm8k \
-  --train_mode mirror_plus \
-  --IS_on_t \
+  --train_mode MIRROR \
+  --PPOTS \
   --batch_size_per_gpu 8 \
   --grad_accum 2
 
@@ -37,7 +37,7 @@ accelerate launch \
   LLaDA/rebuttal.py \
   --seed 20231 \
   --task gsm8k \
-  --train_mode mirror_plus \
-  --IS_on_t \
+  --train_mode MIRROR \
+  --PPOTS \
   --batch_size_per_gpu 8 \
   --grad_accum 2

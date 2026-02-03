@@ -5,7 +5,7 @@ This is extracted from the original `LLaDA/rebuttal.py` with minimal changes:
   - keep exact math and plotting outputs
 
 Currently supported family:
-  - insight_powerU
+  - EPR
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def _kl_trapz(p: np.ndarray, q: np.ndarray, t: np.ndarray, eps: float = 1e-12) -
     return float(_np_trapz(p * log_ratio, t))
 
 
-def _fit_powerU_w_KL(t: np.ndarray, w_raw: np.ndarray, args, seed: int = 0):
+def _fit_EPR_w_KL(t: np.ndarray, w_raw: np.ndarray, args, seed: int = 0):
     rng = np.random.default_rng(seed)
     t = np.clip(np.asarray(t, float), 1e-6, 1 - 1e-6)
     w_raw = np.maximum(np.asarray(w_raw, float), 0.0)
@@ -147,9 +147,9 @@ def fit_p_of_t(
 
     t_clip = np.clip(t, 1e-6, 1 - 1e-6)
 
-    if fit_mode == "insight_powerU":
-        params_fit, p_pdf_grid, g_grid, v_grid, _, _ = _fit_powerU_w_KL(t_clip, w_raw, args)
-        family = "insight_powerU"
+    if fit_mode == "EPR":
+        params_fit, p_pdf_grid, g_grid, v_grid, _, _ = _fit_EPR_w_KL(t_clip, w_raw, args)
+        family = "EPR"
     else:
         raise ValueError(f"Unknown fit_mode: {fit_mode}")
 

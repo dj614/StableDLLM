@@ -15,7 +15,7 @@ accelerate launch \
   LLaDA/rebuttal.py \
   --seed 42 \
   --task openscience \
-  --train_mode mirror_plus \
-  --IS_on_t \
+  --train_mode MIRROR \
+  --PPOTS \
   --batch_size_per_gpu 1 \
   --grad_accum 16

@@ -1,6 +1,6 @@
 """Estimate w(t) (and g(t), v(t) proxies) from noisy-loss statistics.
 
-This module is used when `--IS_on_t` is enabled.
+This module is used when `--PPOTS` is enabled.
 
 It is a direct extraction from the original `LLaDA/rebuttal.py`:
   - batched_losses_for_many_noisy

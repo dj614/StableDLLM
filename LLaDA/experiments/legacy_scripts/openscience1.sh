@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ========== 环境变量 ==========
-export CUDA_VISIBLE_DEVICES=4,5
+export CUDA_VISIBLE_DEVICES=2,3
 export TORCH_NCCL_TRACE_BUFFER_SIZE=16777216
 export NCCL_ASYNC_ERROR_HANDLING=1
 export NCCL_BLOCKING_WAIT=1
@@ -10,10 +10,10 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 
 accelerate launch \
-  --config_file LLaDA/accelerate_ds.yaml \
-  --main_process_port 29502 \
+  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+  --main_process_port 29501 \
   LLaDA/rebuttal.py \
-  --seed 731 \
+  --seed 42 \
   --task openscience \
   --train_mode mirror_plus \
   --IS_on_t \

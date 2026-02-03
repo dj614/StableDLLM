@@ -185,3 +185,26 @@ been adopted by LLaDA.
 }
 ```
 
+
+---
+
+## Unified CLI (inference / scoring)
+
+This repo includes a small, reusable CLI under `LLaDA/llada/` to keep evaluation code clean and avoid hard-coded paths.
+
+Examples (run from repo root):
+
+```bash
+# GSM8K
+python -m LLaDA.llada.cli.main infer --task gsm8k --split test --out_file outputs/eval/pred_gsm8k.jsonl
+python -m LLaDA.llada.cli.main score --task gsm8k --pred_jsonl outputs/eval/pred_gsm8k.jsonl
+
+# Or the minimal wrapper script:
+bash LLaDA/scripts/run_gsm8k_eval.sh /path/to/checkpoint 0 1 2 3
+```
+
+Legacy evaluation scripts are still available (as wrappers) for backwards compatibility:
+- `LLaDA/evaluate_gsm8k.py`
+- `LLaDA/evaluate_openscience.py`
+- `LLaDA/inference_hitab.py`
+

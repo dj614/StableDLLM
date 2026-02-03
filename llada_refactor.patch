@@ -1,0 +1,1434 @@
+diff --git a/LLaDA/README.md b/LLaDA/README.md
+index 4b62748..8367521 100644
+--- a/LLaDA/README.md
++++ b/LLaDA/README.md
+@@ -185,3 +185,26 @@ been adopted by LLaDA.
+ }
+ ```
+ 
++
++---
++
++## Unified CLI (inference / scoring)
++
++This repo includes a small, reusable CLI under `LLaDA/llada/` to keep evaluation code clean and avoid hard-coded paths.
++
++Examples (run from repo root):
++
++```bash
++# GSM8K
++python -m LLaDA.llada.cli.main infer --task gsm8k --split test --out_file outputs/eval/pred_gsm8k.jsonl
++python -m LLaDA.llada.cli.main score --task gsm8k --pred_jsonl outputs/eval/pred_gsm8k.jsonl
++
++# Or the minimal wrapper script:
++bash LLaDA/scripts/run_gsm8k_eval.sh /path/to/checkpoint 0 1 2 3
++```
++
++Legacy evaluation scripts are still available (as wrappers) for backwards compatibility:
++- `LLaDA/evaluate_gsm8k.py`
++- `LLaDA/evaluate_openscience.py`
++- `LLaDA/inference_hitab.py`
++
+diff --git a/LLaDA/accelerate_ds.yaml b/LLaDA/configs/accelerate/deepspeed_zero2.yaml
+similarity index 54%
+rename from LLaDA/accelerate_ds.yaml
+rename to LLaDA/configs/accelerate/deepspeed_zero2.yaml
+index f19f6ce..62072c9 100644
+--- a/LLaDA/accelerate_ds.yaml
++++ b/LLaDA/configs/accelerate/deepspeed_zero2.yaml
+@@ -4,5 +4,5 @@ num_machines: 1
+ num_processes: 2
+ 
+ deepspeed_config:
+-  deepspeed_config_file: LLaDA/deepspeed_stage2.json
+-  zero3_init_flag: true
+\ No newline at end of file
++  deepspeed_config_file: LLaDA/configs/deepspeed/zero2_cpu_offload.json
++  zero3_init_flag: false
+\ No newline at end of file
+diff --git a/LLaDA/deepspeed_stage2.json b/LLaDA/configs/deepspeed/zero2_cpu_offload.json
+similarity index 100%
+rename from LLaDA/deepspeed_stage2.json
+rename to LLaDA/configs/deepspeed/zero2_cpu_offload.json
+diff --git a/LLaDA/evaluate_gsm8k.py b/LLaDA/evaluate_gsm8k.py
+index 890f28f..992bf94 100644
+--- a/LLaDA/evaluate_gsm8k.py
++++ b/LLaDA/evaluate_gsm8k.py
+@@ -1,142 +1,64 @@
+-from tqdm.auto import tqdm 
+-from pathlib import Path
+-import json
+-import re
+-import torch
+-import argparse
+-from transformers import AutoTokenizer, AutoModelForCausalLM
+-from datasets import load_dataset
+-from generate import generate
+-
+-# ------------ 解析命令行参数 ------------
+-parser = argparse.ArgumentParser()
+-parser.add_argument("--checkpoint_path", type=str, default="", help="path to finetuned checkpoint (optional)")
+-parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7],
+-                    help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
+-args = parser.parse_args()
+-
+-# ------------ 可修改的超参 ------------
+-CHECKPOINT_PATH  = args.checkpoint_path
+-DEVICE_IDS       = args.device_ids
+-
+-# ----------- 不需要修改的超参 ----------
+-BATCH_SIZE       = 16
+-MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
+-DATASET_NAME     = "openai/gsm8k"
+-DATASET_CONFIG   = "main"
+-SPLIT            = "test"
+-TEMP             = 0.
+-GEN_LENGTH       = 128
+-STEPS            = 128
+-BLOCK_LENGTH     = 32
+-BASE_OUTPUT      = Path("/root/workspace/data/eval")
+-suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:]) if CHECKPOINT_PATH else Path("base")
+-OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_gsm8k_128_128_32.jsonl"
+-OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+-
+-# ================= 工具函数 =================
+-def extract_hash_answer(text):
+-    """提取 #### 后的整数答案"""
+-    if not isinstance(text, str):
+-        return None
+-    m = re.search(r"####\s*([-+]?\d+)", text)
+-    return m.group(1).strip() if m else None
+-
+-# ================= 1. 加载模型 =================
+-load_path = CHECKPOINT_PATH if CHECKPOINT_PATH else MODEL_NAME
+-tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True)
+-
+-print(f"Loading model on GPUs: {DEVICE_IDS} ...")
+-base_model = AutoModelForCausalLM.from_pretrained(
+-    load_path,
+-    trust_remote_code=True,
+-    torch_dtype="auto",
+-)
+-
+-model = torch.nn.DataParallel(base_model, device_ids=DEVICE_IDS)
+-model.eval().cuda()
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
+ 
+-# ================= 2. 加载数据 =================
+-dataset = load_dataset(DATASET_NAME, DATASET_CONFIG, split=SPLIT)
+-progress = tqdm(total=len(dataset), desc="Samples", unit="example")
++"""Legacy wrapper for GSM8K evaluation.
+ 
+-correct = 0
+-total = 0
++This script is kept for backward compatibility. The actual logic lives in:
++  python -m LLaDA.llada.cli.main infer/score
+ 
+-# ================= 3. 推理 + 保存 =================
+-with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
+-    for i in range(0, len(dataset), BATCH_SIZE):
+-        batch = dataset[i : i + BATCH_SIZE]  # dict of lists
+-        questions = batch["question"]
+-        gold_raws = batch["answer"]
++Example:
++  python LLaDA/evaluate_gsm8k.py --checkpoint_path /path/to/ckpt --device_ids 0 1 2 3
++"""
+ 
+-        # ====== 构造 batch prompts ======
+-        prompts = []
+-        for q in questions:
+-            msgs = [{"role": "user", "content": q}]
+-            prompt = tokenizer.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
+-            prompts.append(prompt)
++from __future__ import annotations
+ 
+-        # ====== tokenize batch ======
+-        encoded = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
+-
+-        # ====== 多卡推理 ======
+-        with torch.no_grad():
+-            curr_bs = encoded["input_ids"].size(0)
+-            n_gpus = len(DEVICE_IDS)
+-            if curr_bs < n_gpus:
+-                # 最后一个小 batch：不用 DataParallel，单卡跑
+-                out = generate(
+-                    model.module,  # 取出真实模型
+-                    encoded["input_ids"].to("cuda:0"),
+-                    steps=STEPS,
+-                    gen_length=GEN_LENGTH,
+-                    block_length=BLOCK_LENGTH,
+-                    temperature=TEMP,
+-                    cfg_scale=0.,
+-                    remasking="low_confidence"
+-                )
+-            else:
+-                # 正常 batch：多卡 DP 跑
+-                out = generate(
+-                    model,
+-                    encoded["input_ids"],
+-                    steps=STEPS,
+-                    gen_length=GEN_LENGTH,
+-                    block_length=BLOCK_LENGTH,
+-                    temperature=TEMP,
+-                    cfg_scale=0.,
+-                    remasking="low_confidence"
+-                )
+-
+-        decoded = tokenizer.batch_decode(
+-            out[:, encoded["input_ids"].shape[1]:],
+-            skip_special_tokens=True
+-        )
+-
+-        # ====== 逐条处理结果 ======
+-        for q, gold_raw, pred_text in zip(questions, gold_raws, decoded):
+-            gold_answer = extract_hash_answer(gold_raw)
+-            pred_answer = extract_hash_answer(pred_text)
+-
+-            # pred 提取不到 => 直接错；gold 提取不到也判错（按你原逻辑）
+-            is_correct = (gold_answer is not None) and (pred_answer == gold_answer)
+-
+-            total += 1
+-            correct += int(is_correct)
+-
+-            fout.write(json.dumps({
+-                "question": q,
+-                "gold_answer": gold_answer,
+-                "gold_raw": gold_raw,
+-                "prediction": pred_text,
+-                "pred_answer": pred_answer,
+-                "correct": is_correct
+-            }, ensure_ascii=False) + "\n")
+-
+-            progress.update(1)
++import argparse
++import sys
++from pathlib import Path
+ 
+-progress.close()
+-acc = correct / total if total > 0 else 0
+-print(f"✔ 评测完成，共 {total} 条，正确 {correct} 条，Accuracy = {acc:.4f}")
+-print(f"✔ 结果已保存到 {OUTPUT_PATH}")
++# Make `import LLaDA...` work even if executed from inside LLaDA/
++_REPO_ROOT = Path(__file__).resolve().parents[1]
++if str(_REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(_REPO_ROOT))
++
++from LLaDA.llada.cli.main import main as cli_main  # noqa: E402
++
++
++def main() -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--checkpoint_path", type=str, default="", help="finetuned checkpoint path (optional)")
++    ap.add_argument("--device_ids", type=int, nargs="+", default=[0], help="gpu ids, e.g. --device_ids 0 1 2 3")
++    ap.add_argument("--out_dir", type=str, default="outputs/eval", help="output directory (relative or absolute)")
++    args = ap.parse_args()
++
++    out_dir = Path(args.out_dir)
++    out_dir.mkdir(parents=True, exist_ok=True)
++
++    suffix = "base" if not args.checkpoint_path else Path(args.checkpoint_path).name
++    pred_jsonl = out_dir / f"predictions_gsm8k_{suffix}.jsonl"
++    metrics_json = out_dir / f"predictions_gsm8k_{suffix}.metrics.json"
++
++    cli_main([
++        "infer",
++        "--task", "gsm8k",
++        "--split", "test",
++        "--checkpoint_path", args.checkpoint_path,
++        "--device_ids", *map(str, args.device_ids),
++        "--batch_size", "16",
++        "--temperature", "0",
++        "--gen_length", "128",
++        "--steps", "128",
++        "--block_length", "32",
++        "--out_file", str(pred_jsonl),
++    ])
++
++    cli_main([
++        "score",
++        "--task", "gsm8k",
++        "--pred_jsonl", str(pred_jsonl),
++        "--out_metrics", str(metrics_json),
++    ])
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/LLaDA/evaluate_openscience.py b/LLaDA/evaluate_openscience.py
+index 7d9f618..7a22c72 100644
+--- a/LLaDA/evaluate_openscience.py
++++ b/LLaDA/evaluate_openscience.py
+@@ -1,127 +1,67 @@
+-from tqdm.auto import tqdm
+-from pathlib import Path
+-import json
+-import re
+-import torch
+-import argparse
+-from transformers import AutoTokenizer, AutoModelForCausalLM
+-from datasets import load_dataset
+-from generate import generate
+-
+-# ------------ 解析命令行参数 ------------
+-parser = argparse.ArgumentParser()
+-parser.add_argument("--checkpoint_path", type=str, default="", help="path to finetuned checkpoint (optional)")
+-parser.add_argument("--device_ids", type=int, nargs="+", default=[0,1,2,3,4,5,6,7],
+-                    help="gpu ids for DataParallel, e.g. --device_ids 0 1 2 3")
+-args = parser.parse_args()
+-
+-# ------------ 可修改的超参 ------------
+-CHECKPOINT_PATH  = args.checkpoint_path
+-DEVICE_IDS       = args.device_ids
+-
+-# ----------- 不需要修改的超参 ----------
+-BATCH_SIZE       = 8
+-MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
+-DATASET_NAME     = "nvidia/OpenScienceReasoning-2"
+-SPLIT            = "train"
+-START_INDEX      = 5000
+-END_INDEX        = 6000
+-TEMP             = 0.
+-GEN_LENGTH       = 256
+-STEPS            = 256
+-BLOCK_LENGTH     = 256
+-BASE_OUTPUT      = Path("/root/workspace/data/eval")
+-suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
+-OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_openscience_256_256_256.jsonl"
+-OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+-
+-# ============== 工具函数 ======================
+-def extract_boxed_answer(text):
+-    # 匹配 \boxed{...}
+-    if not isinstance(text, str):
+-        return None
+-    m = re.search(r"\\boxed\{([A-Za-z0-9\+\-\.\, ]+)\}", text)
+-    return m.group(1).strip() if m else None
+-
+-# ============== 1. 加载 tokenizer / model ======================
+-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, trust_remote_code=True)
+-
+-print(f"Loading model on GPUs: {DEVICE_IDS} ...")
+-base_model = AutoModelForCausalLM.from_pretrained(
+-    CHECKPOINT_PATH,
+-    trust_remote_code=True,
+-    torch_dtype="auto"
+-)
+-
+-model = torch.nn.DataParallel(base_model, device_ids=DEVICE_IDS)
+-model.eval().cuda()
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
+ 
+-# ============== 2. 加载数据 ======================
+-dataset = load_dataset(DATASET_NAME, split=SPLIT)
+-dataset = dataset.select(range(START_INDEX, END_INDEX))
+-assert "input" in dataset[0] and "output" in dataset[0]
+-print(f"✔ Loaded OpenScience samples: {len(dataset)}")
++"""Legacy wrapper for OpenScienceReasoning-2 evaluation.
+ 
+-progress = tqdm(total=len(dataset), desc="Samples", unit="example")
+-correct = 0
+-total = 0
++Kept for backward compatibility. Uses the unified CLI:
++  python -m LLaDA.llada.cli.main infer/score
+ 
+-# ============== 3. 推理 ======================
+-with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
+-    for i in range(0, len(dataset), BATCH_SIZE):
+-        batch = dataset[i : i + BATCH_SIZE]   # 注意：这里 batch 是 dict of lists
++Example:
++  python LLaDA/evaluate_openscience.py --checkpoint_path /path/to/ckpt --device_ids 0 1
++"""
+ 
+-        inputs = batch["input"]
+-        outputs = batch["output"]
++from __future__ import annotations
+ 
+-        # ======= 构造 batch 输入 =======
+-        prompts = []
+-        for inp in inputs:
+-            m = [{"role": "user", "content": inp}]
+-            p = tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
+-            prompts.append(p)
+-
+-        encoded = tokenizer(prompts, padding=True, return_tensors="pt").to("cuda")
+-
+-        # ======= 多卡推理 =======
+-        with torch.no_grad():
+-            out = generate(
+-                model,
+-                encoded["input_ids"],
+-                steps=STEPS,
+-                gen_length=GEN_LENGTH,
+-                block_length=BLOCK_LENGTH,
+-                temperature=TEMP,
+-                cfg_scale=0.,
+-                remasking="low_confidence"
+-            )
+-
+-        decoded = tokenizer.batch_decode(
+-            out[:, encoded["input_ids"].shape[1]:],
+-            skip_special_tokens=True
+-        )
+-
+-        # ======= 处理 batch 内每个样本 =======
+-        for inp, gold_cot_output, pred_text in zip(inputs, outputs, decoded):
+-            gold_answer = extract_boxed_answer(gold_cot_output)
+-            pred_answer = extract_boxed_answer(pred_text)
+-
+-            is_correct = (gold_answer == pred_answer)
+-            total += 1
+-            correct += int(is_correct)
+-
+-            fout.write(json.dumps({
+-                "input": inp,
+-                "gold_output": gold_cot_output,
+-                "gold_answer": gold_answer,
+-                "prediction": pred_text,
+-                "pred_answer": pred_answer,
+-                "correct": is_correct
+-            }, ensure_ascii=False) + "\n")
+-
+-            progress.update(1)
++import argparse
++import sys
++from pathlib import Path
+ 
+-progress.close()
+-acc = correct / total if total > 0 else 0
+-print(f"✔ 完成推理！共 {total} 条，正确 {correct} 条，Accuracy = {acc:.4f}")
+-print(f"✔ 结果已保存至：{OUTPUT_PATH}")
++_REPO_ROOT = Path(__file__).resolve().parents[1]
++if str(_REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(_REPO_ROOT))
++
++from LLaDA.llada.cli.main import main as cli_main  # noqa: E402
++
++
++def main() -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--checkpoint_path", type=str, default="", help="finetuned checkpoint path (optional)")
++    ap.add_argument("--device_ids", type=int, nargs="+", default=[0], help="gpu ids")
++    ap.add_argument("--start_index", type=int, default=5000)
++    ap.add_argument("--end_index", type=int, default=6000)
++    ap.add_argument("--out_dir", type=str, default="outputs/eval")
++    args = ap.parse_args()
++
++    out_dir = Path(args.out_dir)
++    out_dir.mkdir(parents=True, exist_ok=True)
++
++    suffix = "base" if not args.checkpoint_path else Path(args.checkpoint_path).name
++    pred_jsonl = out_dir / f"predictions_openscience_{suffix}.jsonl"
++    metrics_json = out_dir / f"predictions_openscience_{suffix}.metrics.json"
++
++    cli_main([
++        "infer",
++        "--task", "openscience",
++        "--split", "train",
++        "--start_index", str(args.start_index),
++        "--end_index", str(args.end_index),
++        "--checkpoint_path", args.checkpoint_path,
++        "--device_ids", *map(str, args.device_ids),
++        "--batch_size", "8",
++        "--temperature", "0",
++        "--gen_length", "256",
++        "--steps", "256",
++        "--block_length", "256",
++        "--out_file", str(pred_jsonl),
++    ])
++
++    cli_main([
++        "score",
++        "--task", "openscience",
++        "--pred_jsonl", str(pred_jsonl),
++        "--out_metrics", str(metrics_json),
++    ])
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/LLaDA/scripts/gsm8k.sh b/LLaDA/experiments/legacy_scripts/gsm8k.sh
+old mode 100644
+new mode 100755
+similarity index 79%
+rename from LLaDA/scripts/gsm8k.sh
+rename to LLaDA/experiments/legacy_scripts/gsm8k.sh
+index d05e338..2d5a45b
+--- a/LLaDA/scripts/gsm8k.sh
++++ b/LLaDA/experiments/legacy_scripts/gsm8k.sh
+@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
+ 
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29500 \
+   LLaDA/rebuttal.py \
+   --seed 42 \
+@@ -21,7 +21,7 @@ accelerate launch \
+   --grad_accum 2
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29500 \
+   LLaDA/rebuttal.py \
+   --seed 731 \
+@@ -32,7 +32,7 @@ accelerate launch \
+   --grad_accum 2
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29500 \
+   LLaDA/rebuttal.py \
+   --seed 20231 \
+diff --git a/LLaDA/scripts/openscience1.sh b/LLaDA/experiments/legacy_scripts/openscience1.sh
+old mode 100644
+new mode 100755
+similarity index 84%
+rename from LLaDA/scripts/openscience1.sh
+rename to LLaDA/experiments/legacy_scripts/openscience1.sh
+index 27c4e6e..fa7132d
+--- a/LLaDA/scripts/openscience1.sh
++++ b/LLaDA/experiments/legacy_scripts/openscience1.sh
+@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
+ 
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29501 \
+   LLaDA/rebuttal.py \
+   --seed 42 \
+diff --git a/LLaDA/scripts/openscience2.sh b/LLaDA/experiments/legacy_scripts/openscience2.sh
+old mode 100644
+new mode 100755
+similarity index 84%
+rename from LLaDA/scripts/openscience2.sh
+rename to LLaDA/experiments/legacy_scripts/openscience2.sh
+index f78c38c..b9fd5bc
+--- a/LLaDA/scripts/openscience2.sh
++++ b/LLaDA/experiments/legacy_scripts/openscience2.sh
+@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
+ 
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29502 \
+   LLaDA/rebuttal.py \
+   --seed 731 \
+diff --git a/LLaDA/scripts/openscience3.sh b/LLaDA/experiments/legacy_scripts/openscience3.sh
+old mode 100644
+new mode 100755
+similarity index 84%
+rename from LLaDA/scripts/openscience3.sh
+rename to LLaDA/experiments/legacy_scripts/openscience3.sh
+index 82fe299..e85c456
+--- a/LLaDA/scripts/openscience3.sh
++++ b/LLaDA/experiments/legacy_scripts/openscience3.sh
+@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
+ 
+ 
+ accelerate launch \
+-  --config_file LLaDA/accelerate_ds.yaml \
++  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
+   --main_process_port 29503 \
+   LLaDA/rebuttal.py \
+   --seed 20231 \
+diff --git a/LLaDA/inference_hitab.py b/LLaDA/inference_hitab.py
+index 779c8a0..a7b37f2 100644
+--- a/LLaDA/inference_hitab.py
++++ b/LLaDA/inference_hitab.py
+@@ -1,77 +1,59 @@
+-from tqdm.auto import tqdm
+-from pathlib import Path
+-import json
+-import torch
+-from transformers import AutoTokenizer, AutoModelForCausalLM
+-from generate import generate
+-
+-# ------------ 可自行修改的超参 ------------
+-CHECKPOINT_PATH  = "/storage/result/checkpoints/LLaDA/seed42_instruct_hitab_MirrorMask_noIS_RespMask_EMA_bins6_blr0.01_stratified_6_train_ratio0.9_epoch5_bs32_lr_sched_linear_lr5e-05_warmup0_max_len4096_250806_075630/checkpoint-epoch5"
+-DATA_PATH        = "/storage/v-mengnijia/LLaDA/data.jsonl"
+-BASE_OUTPUT      = Path("/storage/v-mengnijia/LLaDA/eval/data")
+-suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
+-device    = torch.device("cuda:1")
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
+ 
+-MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
+-BATCH_SIZE       = 16       # 每 GPU 同时处理几条 prompt
+-MAX_DATA         = None
+-TASK             = "hitab"
+-TEMP             = 0.
+-GEN_LENGTH       = 512
+-STEPS            = 256
+-BLOCK_LENGTH     = 16
+-OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_{TASK}_temp{TEMP}_gen{GEN_LENGTH}_steps{STEPS}_block{BLOCK_LENGTH}.jsonl"
+-OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+-# --------------------------------------
++"""Legacy wrapper for HiTab inference.
+ 
+-# 1. 加载 tokenizer / model
+-load_path = CHECKPOINT_PATH if CHECKPOINT_PATH else MODEL_NAME
+-tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True)
+-model = AutoModelForCausalLM.from_pretrained(load_path, trust_remote_code=True, torch_dtype="auto")
+-model.eval().to(device)
++The old version hard-coded local paths. This wrapper delegates to the unified CLI.
+ 
+-# 2. 读取数据集并按 batch_size 分块
+-def read_batches(path, bs):
+-    with open(path, "r", encoding="utf-8") as f:
+-        buf = []
+-        for line in f:
+-            buf.append(json.loads(line))
+-            if len(buf) == bs:
+-                yield buf
+-                buf = []
+-        if buf:                              # 处理最后一个不足 batch 的残包
+-            yield buf
++Example:
++  python LLaDA/inference_hitab.py \
++    --checkpoint_path /path/to/ckpt \
++    --data_jsonl /path/to/hitab.jsonl \
++    --out_file outputs/eval/predictions_hitab.jsonl
++"""
+ 
+-total_samples = sum(1 for _ in open(DATA_PATH, encoding="utf-8"))  # 1412
+-if MAX_DATA is not None:
+-    total_samples = min(total_samples, MAX_DATA)
+-progress = tqdm(total=total_samples, desc="Samples", unit="example")
++from __future__ import annotations
+ 
+-processed = 0  # 已处理样本计数
+-
+-# 3. 推理 + 保存
+-with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
+-    for batch in read_batches(DATA_PATH, BATCH_SIZE):
+-        for i, item in enumerate(batch):
+-            if MAX_DATA is not None and processed >= MAX_DATA:
+-                break
+-            prompt = item["prompt"]
+-            m = [{"role": "user", "content": prompt}, ]
+-            prompt = tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
+-            input_ids = tokenizer(prompt)['input_ids']
+-            input_ids = torch.tensor(input_ids).to(device).unsqueeze(0)
+-            out = generate(model, input_ids, steps=STEPS, gen_length=GEN_LENGTH, block_length=BLOCK_LENGTH, temperature=TEMP, cfg_scale=0., remasking='low_confidence')
+-            ans = tokenizer.batch_decode(out[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
+-            # 写回 jsonl：保留 prompt / ground_truth，新增 prediction
+-            sample = batch[i]
+-            sample["prediction"] = ans
+-            fout.write(json.dumps(sample, ensure_ascii=False) + "\n")
+-            
+-            processed += 1
+-            progress.update(1)
+-        
+-        if MAX_DATA is not None and processed >= MAX_DATA:
+-            break
++import argparse
++import sys
++from pathlib import Path
+ 
+-progress.close()
+-print(f"✔ All done! 结果已保存到 {OUTPUT_PATH}")
+\ No newline at end of file
++_REPO_ROOT = Path(__file__).resolve().parents[1]
++if str(_REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(_REPO_ROOT))
++
++from LLaDA.llada.cli.main import main as cli_main  # noqa: E402
++
++
++def main() -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--checkpoint_path", type=str, default="", help="finetuned checkpoint path (optional)")
++    ap.add_argument("--device_ids", type=int, nargs="+", default=[0])
++    ap.add_argument("--data_jsonl", type=str, required=True, help="HiTab jsonl with at least 'prompt' and gold fields")
++    ap.add_argument("--out_file", type=str, default="outputs/eval/predictions_hitab.jsonl")
++    ap.add_argument("--batch_size", type=int, default=16)
++    ap.add_argument("--gen_length", type=int, default=512)
++    ap.add_argument("--steps", type=int, default=256)
++    ap.add_argument("--block_length", type=int, default=16)
++    ap.add_argument("--temperature", type=float, default=0.0)
++    args = ap.parse_args()
++
++    Path(args.out_file).parent.mkdir(parents=True, exist_ok=True)
++
++    cli_main([
++        "infer",
++        "--task", "hitab",
++        "--data_jsonl", args.data_jsonl,
++        "--checkpoint_path", args.checkpoint_path,
++        "--device_ids", *map(str, args.device_ids),
++        "--batch_size", str(args.batch_size),
++        "--temperature", str(args.temperature),
++        "--gen_length", str(args.gen_length),
++        "--steps", str(args.steps),
++        "--block_length", str(args.block_length),
++        "--out_file", args.out_file,
++    ])
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/LLaDA/llada/__init__.py b/LLaDA/llada/__init__.py
+new file mode 100644
+index 0000000..bc3ac9c
+--- /dev/null
++++ b/LLaDA/llada/__init__.py
+@@ -0,0 +1,6 @@
++"""LLaDA utilities: clean CLI + evaluation for inference-only workflows.
++
++This subpackage is introduced to separate reusable code from one-off scripts.
++"""
++
++__all__ = ["cli", "eval", "model", "tasks", "utils"]
+diff --git a/LLaDA/llada/cli/__init__.py b/LLaDA/llada/cli/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/LLaDA/llada/cli/main.py b/LLaDA/llada/cli/main.py
+new file mode 100644
+index 0000000..20c8980
+--- /dev/null
++++ b/LLaDA/llada/cli/main.py
+@@ -0,0 +1,188 @@
++from __future__ import annotations
++
++import argparse
++import json
++from pathlib import Path
++from typing import Any, Dict, List, Optional
++
++import torch
++
++from ..model.load import load_tokenizer_and_model
++from ..tasks.registry import iter_task_examples
++from ..utils.io import iter_jsonl, write_jsonl
++from ..eval.metrics import score_gsm8k, score_hitab, score_openscience
++
++from ...generate import generate  # reuse existing sampler
++
++
++DEFAULT_MODEL_NAME = "GSAI-ML/LLaDA-8B-Instruct"
++
++
++def _ensure_repo_paths():
++    # placeholder for future path utilities
++    return
++
++
++def cmd_infer(args: argparse.Namespace) -> None:
++    loaded = load_tokenizer_and_model(
++        model_name=args.model_name,
++        checkpoint_path=args.checkpoint_path,
++        device_ids=args.device_ids,
++    )
++    tok = loaded.tokenizer
++    model = loaded.model
++    device = loaded.device
++
++    out_path = Path(args.out_file)
++    out_path.parent.mkdir(parents=True, exist_ok=True)
++
++    rows: List[Dict[str, Any]] = []
++    batch_prompts: List[str] = []
++    batch_meta: List[Dict[str, Any]] = []
++    batch_gold: List[str] = []
++
++    def flush_batch():
++        nonlocal batch_prompts, batch_meta, batch_gold, rows
++        if not batch_prompts:
++            return
++        prompts = []
++        for p in batch_prompts:
++            msgs = [{"role": "user", "content": p}]
++            prompt = tok.apply_chat_template(msgs, add_generation_prompt=True, tokenize=False)
++            prompts.append(prompt)
++        encoded = tok(prompts, padding=True, return_tensors="pt")
++        input_ids = encoded["input_ids"].to(device)
++
++        with torch.no_grad():
++            if isinstance(model, torch.nn.DataParallel) and input_ids.size(0) < len(loaded.device_ids):
++                out = generate(
++                    model.module,
++                    input_ids.to(f"cuda:{loaded.device_ids[0]}") if device.type == "cuda" else input_ids,
++                    steps=args.steps,
++                    gen_length=args.gen_length,
++                    block_length=args.block_length,
++                    temperature=args.temperature,
++                    cfg_scale=args.cfg_scale,
++                    remasking=args.remasking,
++                    mask_id=args.mask_id,
++                )
++            else:
++                out = generate(
++                    model,
++                    input_ids,
++                    steps=args.steps,
++                    gen_length=args.gen_length,
++                    block_length=args.block_length,
++                    temperature=args.temperature,
++                    cfg_scale=args.cfg_scale,
++                    remasking=args.remasking,
++                    mask_id=args.mask_id,
++                )
++
++        decoded = tok.batch_decode(out[:, input_ids.shape[1]:], skip_special_tokens=True)
++        for pred_text, meta, gold_raw, raw_prompt in zip(decoded, batch_meta, batch_gold, batch_prompts):
++            rows.append({
++                "task": args.task,
++                "prompt": raw_prompt,
++                "gold_raw": gold_raw,
++                "prediction": pred_text,
++                "meta": meta,
++            })
++
++        batch_prompts, batch_meta, batch_gold = [], [], []
++
++    for ex in iter_task_examples(
++        task=args.task,
++        split=args.split,
++        data_jsonl=args.data_jsonl,
++        start_index=args.start_index,
++        end_index=args.end_index,
++        max_samples=args.max_samples,
++    ):
++        batch_prompts.append(ex.prompt)
++        batch_meta.append(ex.meta)
++        batch_gold.append(ex.gold_raw)
++        if len(batch_prompts) >= args.batch_size:
++            flush_batch()
++
++    flush_batch()
++    write_jsonl(out_path, rows)
++    print(f"Saved predictions: {out_path} (n={len(rows)})")
++
++
++def cmd_score(args: argparse.Namespace) -> None:
++    rows = list(iter_jsonl(args.pred_jsonl))
++    task = args.task.lower()
++    if task == "gsm8k":
++        res = score_gsm8k(rows)
++    elif task == "openscience":
++        res = score_openscience(rows)
++    elif task == "hitab":
++        res = score_hitab(rows)
++    else:
++        raise ValueError(f"Unknown task: {args.task}")
++
++    metrics = res.to_dict()
++    out_path = Path(args.out_metrics) if args.out_metrics else None
++    if out_path:
++        out_path.parent.mkdir(parents=True, exist_ok=True)
++        out_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
++        print(f"Saved metrics: {out_path}")
++    print(json.dumps(metrics, indent=2))
++
++
++def cmd_preprocess(args: argparse.Namespace) -> None:
++    # Minimal placeholder: keep legacy preprocess under tools/ for now.
++    raise SystemExit(
++        "preprocess has been moved to tools/preprocess/legacy/ for this repo. "
++        "If you need a unified preprocessing pipeline, extend llada/cli/main.py."
++    )
++
++
++def build_parser() -> argparse.ArgumentParser:
++    p = argparse.ArgumentParser(prog="llada")
++    sub = p.add_subparsers(dest="cmd", required=True)
++
++    pi = sub.add_parser("infer", help="run inference and write predictions jsonl")
++    pi.add_argument("--task", type=str, required=True, choices=["gsm8k", "openscience", "hitab"])
++    pi.add_argument("--split", type=str, default="test")
++    pi.add_argument("--data_jsonl", type=str, default="", help="for hitab: path to jsonl with prompt + gold")
++    pi.add_argument("--start_index", type=int, default=5000, help="openscience start index (default matches legacy)")
++    pi.add_argument("--end_index", type=int, default=6000, help="openscience end index (default matches legacy)")
++    pi.add_argument("--max_samples", type=int, default=None)
++
++    pi.add_argument("--model_name", type=str, default=DEFAULT_MODEL_NAME)
++    pi.add_argument("--checkpoint_path", type=str, default="")
++    pi.add_argument("--device_ids", type=int, nargs="+", default=[0])
++
++    pi.add_argument("--batch_size", type=int, default=16)
++    pi.add_argument("--temperature", type=float, default=0.0)
++    pi.add_argument("--gen_length", type=int, default=128)
++    pi.add_argument("--steps", type=int, default=128)
++    pi.add_argument("--block_length", type=int, default=32)
++    pi.add_argument("--cfg_scale", type=float, default=0.0)
++    pi.add_argument("--remasking", type=str, default="low_confidence", choices=["low_confidence", "random"])
++    pi.add_argument("--mask_id", type=int, default=126336)
++    pi.add_argument("--out_file", type=str, required=True)
++    pi.set_defaults(func=cmd_infer)
++
++    ps = sub.add_parser("score", help="score an existing predictions jsonl")
++    ps.add_argument("--task", type=str, required=True, choices=["gsm8k", "openscience", "hitab"])
++    ps.add_argument("--pred_jsonl", type=str, required=True)
++    ps.add_argument("--out_metrics", type=str, default="")
++    ps.set_defaults(func=cmd_score)
++
++    pp = sub.add_parser("preprocess", help="(placeholder) see tools/preprocess/legacy/")
++    pp.set_defaults(func=cmd_preprocess)
++
++    return p
++
++
++def main(argv: Optional[List[str]] = None) -> None:
++    parser = build_parser()
++    args = parser.parse_args(argv)
++    args.func(args)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/LLaDA/llada/eval/__init__.py b/LLaDA/llada/eval/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/LLaDA/llada/eval/extract.py b/LLaDA/llada/eval/extract.py
+new file mode 100644
+index 0000000..e2816e0
+--- /dev/null
++++ b/LLaDA/llada/eval/extract.py
+@@ -0,0 +1,35 @@
++from __future__ import annotations
++
++import re
++from typing import Optional
++
++
++_GSM8K_HASH_RE = re.compile(r"####\s*([-+]?\d+)")
++_BOXED_RE = re.compile(r"\\boxed\{([^}]+)\}")
++_LAST_NUMBER_RE = re.compile(r"([-+]?\d+(?:\.\d+)?)")
++
++
++def extract_gsm8k_hash_answer(text: str | None) -> Optional[str]:
++    """Extract GSM8K answer formatted as '#### 1234'."""
++    if not isinstance(text, str):
++        return None
++    m = _GSM8K_HASH_RE.search(text)
++    return m.group(1).strip() if m else None
++
++
++def extract_boxed_answer(text: str | None) -> Optional[str]:
++    """Extract answer inside \boxed{...}."""
++    if not isinstance(text, str):
++        return None
++    m = _BOXED_RE.search(text)
++    return m.group(1).strip() if m else None
++
++
++def extract_last_number(text: str | None) -> Optional[str]:
++    """Fallback: return the last number-like token in text."""
++    if not isinstance(text, str):
++        return None
++    ms = list(_LAST_NUMBER_RE.finditer(text))
++    if not ms:
++        return None
++    return ms[-1].group(1).strip()
+diff --git a/LLaDA/llada/eval/metrics.py b/LLaDA/llada/eval/metrics.py
+new file mode 100644
+index 0000000..080e05a
+--- /dev/null
++++ b/LLaDA/llada/eval/metrics.py
+@@ -0,0 +1,96 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import Any, Dict, Iterable, List, Optional, Tuple
++
++from .extract import extract_boxed_answer, extract_gsm8k_hash_answer, extract_last_number
++
++
++def _normalize(s: Optional[str]) -> Optional[str]:
++    if s is None:
++        return None
++    s = s.strip()
++    return s
++
++
++def _loose_match(pred: Optional[str], gold: Optional[str]) -> bool:
++    if pred is None or gold is None:
++        return False
++    return _normalize(pred) == _normalize(gold)
++
++
++@dataclass
++class ScoreResult:
++    total: int
++    correct: int
++    extraction_rate: float
++
++    def to_dict(self) -> Dict[str, Any]:
++        acc = self.correct / self.total if self.total else 0.0
++        return {
++            "total": self.total,
++            "correct": self.correct,
++            "accuracy": acc,
++            "extraction_rate": self.extraction_rate,
++        }
++
++
++def score_gsm8k(rows: Iterable[Dict[str, Any]]) -> ScoreResult:
++    total = 0
++    correct = 0
++    extracted = 0
++    for r in rows:
++        total += 1
++        pred_text = r.get("prediction") or r.get("pred_text") or ""
++        gold_raw = r.get("gold_raw") or r.get("answer") or r.get("gold") or r.get("output") or ""
++        pred = extract_gsm8k_hash_answer(pred_text) or extract_last_number(pred_text)
++        gold = extract_gsm8k_hash_answer(gold_raw) or extract_last_number(gold_raw)
++        if pred is not None:
++            extracted += 1
++        if _loose_match(pred, gold):
++            correct += 1
++    extraction_rate = extracted / total if total else 0.0
++    return ScoreResult(total=total, correct=correct, extraction_rate=extraction_rate)
++
++
++def score_openscience(rows: Iterable[Dict[str, Any]]) -> ScoreResult:
++    total = 0
++    correct = 0
++    extracted = 0
++    for r in rows:
++        total += 1
++        pred_text = r.get("prediction") or ""
++        gold_raw = r.get("gold_raw") or r.get("output") or r.get("answer") or ""
++        pred = extract_boxed_answer(pred_text) or extract_last_number(pred_text)
++        gold = extract_boxed_answer(gold_raw) or extract_last_number(gold_raw)
++        if pred is not None:
++            extracted += 1
++        if _loose_match(pred, gold):
++            correct += 1
++    extraction_rate = extracted / total if total else 0.0
++    return ScoreResult(total=total, correct=correct, extraction_rate=extraction_rate)
++
++
++def score_hitab(rows: Iterable[Dict[str, Any]]) -> ScoreResult:
++    """HiTab datasets vary; we attempt a few common gold fields."""
++    total = 0
++    correct = 0
++    extracted = 0
++    for r in rows:
++        total += 1
++        pred_text = r.get("prediction") or ""
++        gold_raw = (
++            r.get("gold_raw")
++            or r.get("ground_truth")
++            or r.get("answer")
++            or r.get("label")
++            or ""
++        )
++        pred = extract_boxed_answer(pred_text) or extract_gsm8k_hash_answer(pred_text) or extract_last_number(pred_text)
++        gold = extract_boxed_answer(gold_raw) or extract_gsm8k_hash_answer(gold_raw) or extract_last_number(gold_raw)
++        if pred is not None:
++            extracted += 1
++        if _loose_match(pred, gold):
++            correct += 1
++    extraction_rate = extracted / total if total else 0.0
++    return ScoreResult(total=total, correct=correct, extraction_rate=extraction_rate)
+diff --git a/LLaDA/llada/model/__init__.py b/LLaDA/llada/model/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/LLaDA/llada/model/load.py b/LLaDA/llada/model/load.py
+new file mode 100644
+index 0000000..7812d73
+--- /dev/null
++++ b/LLaDA/llada/model/load.py
+@@ -0,0 +1,45 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import List, Optional, Tuple
++
++import torch
++from transformers import AutoModelForCausalLM, AutoTokenizer
++
++
++@dataclass
++class LoadedModel:
++    tokenizer: any
++    model: torch.nn.Module
++    device: torch.device
++    device_ids: List[int]
++
++
++def load_tokenizer_and_model(
++    model_name: str,
++    checkpoint_path: str = "",
++    device_ids: Optional[List[int]] = None,
++) -> LoadedModel:
++    device_ids = device_ids or [0]
++    load_path = checkpoint_path if checkpoint_path else model_name
++
++    tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True)
++
++    base_model = AutoModelForCausalLM.from_pretrained(
++        load_path,
++        trust_remote_code=True,
++        torch_dtype="auto",
++    )
++
++    if torch.cuda.is_available():
++        device = torch.device(f"cuda:{device_ids[0]}")
++    else:
++        device = torch.device("cpu")
++
++    if torch.cuda.is_available() and len(device_ids) > 1:
++        model = torch.nn.DataParallel(base_model, device_ids=device_ids).to(device)
++    else:
++        model = base_model.to(device)
++
++    model.eval()
++    return LoadedModel(tokenizer=tokenizer, model=model, device=device, device_ids=device_ids)
+diff --git a/LLaDA/llada/tasks/__init__.py b/LLaDA/llada/tasks/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/LLaDA/llada/tasks/gsm8k.py b/LLaDA/llada/tasks/gsm8k.py
+new file mode 100644
+index 0000000..05f778e
+--- /dev/null
++++ b/LLaDA/llada/tasks/gsm8k.py
+@@ -0,0 +1,16 @@
++from __future__ import annotations
++
++from typing import Iterator, Optional
++
++from datasets import load_dataset
++
++from .registry import TaskExample
++
++
++def iter_gsm8k(split: str = "test", max_samples: Optional[int] = None) -> Iterator[TaskExample]:
++    ds = load_dataset("openai/gsm8k", "main", split=split)
++    n = len(ds) if max_samples is None else min(len(ds), max_samples)
++    for i in range(n):
++        q = ds[i]["question"]
++        a = ds[i]["answer"]
++        yield TaskExample(prompt=q, gold_raw=a, meta={"index": i})
+diff --git a/LLaDA/llada/tasks/hitab.py b/LLaDA/llada/tasks/hitab.py
+new file mode 100644
+index 0000000..3cd12e3
+--- /dev/null
++++ b/LLaDA/llada/tasks/hitab.py
+@@ -0,0 +1,15 @@
++from __future__ import annotations
++
++from typing import Iterator, Optional
++
++from ..utils.io import iter_jsonl
++from .registry import TaskExample
++
++
++def iter_hitab(data_jsonl: str, max_samples: Optional[int] = None) -> Iterator[TaskExample]:
++    for i, row in enumerate(iter_jsonl(data_jsonl)):
++        if max_samples is not None and i >= max_samples:
++            break
++        prompt = row.get("prompt") or row.get("question") or row.get("input") or ""
++        gold_raw = row.get("gold_raw") or row.get("answer") or row.get("output") or row.get("ground_truth") or ""
++        yield TaskExample(prompt=prompt, gold_raw=gold_raw, meta={"index": i, "raw": row})
+diff --git a/LLaDA/llada/tasks/openscience.py b/LLaDA/llada/tasks/openscience.py
+new file mode 100644
+index 0000000..9350a9a
+--- /dev/null
++++ b/LLaDA/llada/tasks/openscience.py
+@@ -0,0 +1,23 @@
++from __future__ import annotations
++
++from typing import Iterator, Optional
++
++from datasets import load_dataset
++
++from .registry import TaskExample
++
++
++def iter_openscience(
++    split: str = "train",
++    start_index: int = 0,
++    end_index: int = 0,
++    max_samples: Optional[int] = None,
++) -> Iterator[TaskExample]:
++    ds = load_dataset("nvidia/OpenScienceReasoning-2", split=split)
++    if end_index and end_index > start_index:
++        ds = ds.select(range(start_index, min(end_index, len(ds))))
++    n = len(ds) if max_samples is None else min(len(ds), max_samples)
++    for i in range(n):
++        inp = ds[i]["input"]
++        out = ds[i]["output"]
++        yield TaskExample(prompt=inp, gold_raw=out, meta={"index": i + start_index})
+diff --git a/LLaDA/llada/tasks/registry.py b/LLaDA/llada/tasks/registry.py
+new file mode 100644
+index 0000000..e914cda
+--- /dev/null
++++ b/LLaDA/llada/tasks/registry.py
+@@ -0,0 +1,38 @@
++from __future__ import annotations
++
++from dataclasses import dataclass
++from typing import Any, Dict, Iterable, Iterator, List, Optional
++
++from .gsm8k import iter_gsm8k
++from .openscience import iter_openscience
++from .hitab import iter_hitab
++
++
++@dataclass
++class TaskExample:
++    prompt: str
++    gold_raw: str
++    meta: Dict[str, Any]
++
++
++def iter_task_examples(
++    task: str,
++    split: str = "test",
++    data_jsonl: str = "",
++    start_index: int = 0,
++    end_index: int = 0,
++    max_samples: Optional[int] = None,
++) -> Iterator[TaskExample]:
++    task = task.lower()
++    if task == "gsm8k":
++        yield from iter_gsm8k(split=split, max_samples=max_samples)
++        return
++    if task == "openscience":
++        yield from iter_openscience(split=split, start_index=start_index, end_index=end_index, max_samples=max_samples)
++        return
++    if task == "hitab":
++        if not data_jsonl:
++            raise ValueError("--data_jsonl is required for task=hitab")
++        yield from iter_hitab(data_jsonl=data_jsonl, max_samples=max_samples)
++        return
++    raise ValueError(f"Unknown task: {task}")
+diff --git a/LLaDA/llada/utils/__init__.py b/LLaDA/llada/utils/__init__.py
+new file mode 100644
+index 0000000..e69de29
+diff --git a/LLaDA/llada/utils/hf.py b/LLaDA/llada/utils/hf.py
+new file mode 100644
+index 0000000..ef8a033
+--- /dev/null
++++ b/LLaDA/llada/utils/hf.py
+@@ -0,0 +1,10 @@
++import os
++
++
++def enable_hf_mirror_china() -> None:
++    """Enable HuggingFace mirror endpoints commonly used in China.
++
++    This keeps behavior compatible with existing scripts that set these env vars.
++    """
++    os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
++    os.environ.setdefault("HF_HOME", os.path.expanduser("~/.cache/huggingface"))
+diff --git a/LLaDA/llada/utils/io.py b/LLaDA/llada/utils/io.py
+new file mode 100644
+index 0000000..c109418
+--- /dev/null
++++ b/LLaDA/llada/utils/io.py
+@@ -0,0 +1,32 @@
++from __future__ import annotations
++
++import json
++from pathlib import Path
++from typing import Any, Dict, Iterable, Iterator, List, Optional
++
++
++def iter_jsonl(path: str | Path) -> Iterator[Dict[str, Any]]:
++    path = Path(path)
++    with path.open("r", encoding="utf-8") as f:
++        for line in f:
++            line = line.strip()
++            if not line:
++                continue
++            yield json.loads(line)
++
++
++def read_jsonl(path: str | Path, max_rows: Optional[int] = None) -> List[Dict[str, Any]]:
++    rows: List[Dict[str, Any]] = []
++    for i, row in enumerate(iter_jsonl(path)):
++        rows.append(row)
++        if max_rows is not None and (i + 1) >= max_rows:
++            break
++    return rows
++
++
++def write_jsonl(path: str | Path, rows: Iterable[Dict[str, Any]]) -> None:
++    path = Path(path)
++    path.parent.mkdir(parents=True, exist_ok=True)
++    with path.open("w", encoding="utf-8") as f:
++        for r in rows:
++            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+diff --git a/LLaDA/scripts/run_gsm8k_eval.sh b/LLaDA/scripts/run_gsm8k_eval.sh
+new file mode 100755
+index 0000000..38a1b3b
+--- /dev/null
++++ b/LLaDA/scripts/run_gsm8k_eval.sh
+@@ -0,0 +1,37 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++# Minimal reproducible GSM8K eval using the unified CLI.
++# Usage:
++#   bash scripts/run_gsm8k_eval.sh /path/to/checkpoint 0 1 2 3
++#
++# If checkpoint is empty, base model is used.
++
++CKPT="${1:-}"
++shift || true
++
++# Remaining args are device ids, e.g. 0 1 2 3
++DEVICE_IDS=("$@")
++if [ "${#DEVICE_IDS[@]}" -eq 0 ]; then
++  DEVICE_IDS=(0)
++fi
++
++OUT_DIR="outputs/eval"
++mkdir -p "${OUT_DIR}"
++
++SUFFIX="base"
++if [ -n "${CKPT}" ]; then
++  # take last 2 path components as a readable suffix
++  SUFFIX="$(basename "$(dirname "${CKPT}")")/$(basename "${CKPT}")"
++  SUFFIX="${SUFFIX//\//_}"
++fi
++
++PRED_JSONL="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.jsonl"
++METRICS_JSON="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.metrics.json"
++
++python -m LLaDA.llada.cli.main infer   --task gsm8k --split test   --checkpoint_path "${CKPT}"   --device_ids "${DEVICE_IDS[@]}"   --batch_size 16 --temperature 0   --gen_length 128 --steps 128 --block_length 32   --out_file "${PRED_JSONL}"
++
++python -m LLaDA.llada.cli.main score   --task gsm8k   --pred_jsonl "${PRED_JSONL}"   --out_metrics "${METRICS_JSON}"
++
++echo "Predictions: ${PRED_JSONL}"
++echo "Metrics:     ${METRICS_JSON}"
+diff --git a/LLaDA/eval/analysis_difficulty_performance.py b/LLaDA/tools/eval/legacy/analysis_difficulty_performance.py
+similarity index 100%
+rename from LLaDA/eval/analysis_difficulty_performance.py
+rename to LLaDA/tools/eval/legacy/analysis_difficulty_performance.py
+diff --git a/LLaDA/eval/evaluation.py b/LLaDA/tools/eval/legacy/evaluation.py
+similarity index 100%
+rename from LLaDA/eval/evaluation.py
+rename to LLaDA/tools/eval/legacy/evaluation.py
+diff --git a/LLaDA/eval/evaluation_gsm8k.py b/LLaDA/tools/eval/legacy/evaluation_gsm8k.py
+similarity index 100%
+rename from LLaDA/eval/evaluation_gsm8k.py
+rename to LLaDA/tools/eval/legacy/evaluation_gsm8k.py
+diff --git a/LLaDA/eval/process_generated_predictions.py b/LLaDA/tools/eval/legacy/process_generated_predictions.py
+similarity index 100%
+rename from LLaDA/eval/process_generated_predictions.py
+rename to LLaDA/tools/eval/legacy/process_generated_predictions.py
+diff --git a/LLaDA/tools/eval/merge_predictions_with_gt.py b/LLaDA/tools/eval/merge_predictions_with_gt.py
+new file mode 100755
+index 0000000..557292c
+--- /dev/null
++++ b/LLaDA/tools/eval/merge_predictions_with_gt.py
+@@ -0,0 +1,84 @@
++#!/usr/bin/env python3
++# -*- coding: utf-8 -*-
++
++"""Merge predictions.jsonl with a ground-truth jsonl.
++
++This is intentionally lightweight and filesystem-friendly:
++- no hard-coded paths
++- supports matching by an id key (default: "id"), falling back to meta.index then line index.
++
++Run from repo root:
++  python LLaDA/tools/eval/merge_predictions_with_gt.py --pred_jsonl ... --gt_jsonl ... --out_jsonl ...
++"""
++
++from __future__ import annotations
++
++import argparse
++import sys
++from pathlib import Path
++from typing import Any, Dict, List, Optional
++
++# Allow running as a script from anywhere:
++_REPO_ROOT = Path(__file__).resolve().parents[3]
++if str(_REPO_ROOT) not in sys.path:
++    sys.path.insert(0, str(_REPO_ROOT))
++
++from LLaDA.llada.utils.io import iter_jsonl, write_jsonl  # noqa: E402
++
++
++def _get_id(row: Dict[str, Any], key: str) -> Optional[str]:
++    if key in row:
++        return str(row[key])
++    meta = row.get("meta")
++    if isinstance(meta, dict) and key in meta:
++        return str(meta[key])
++    if isinstance(meta, dict) and "index" in meta:
++        return str(meta["index"])
++    return None
++
++
++def main() -> None:
++    ap = argparse.ArgumentParser()
++    ap.add_argument("--pred_jsonl", type=str, required=True)
++    ap.add_argument("--gt_jsonl", type=str, required=True)
++    ap.add_argument("--out_jsonl", type=str, required=True)
++    ap.add_argument("--id_key", type=str, default="id", help="match key; fallback to meta.index then line index")
++    args = ap.parse_args()
++
++    preds = list(iter_jsonl(args.pred_jsonl))
++    gts = list(iter_jsonl(args.gt_jsonl))
++
++    gt_map: Dict[str, Dict[str, Any]] = {}
++    for i, g in enumerate(gts):
++        gid = _get_id(g, args.id_key) or str(i)
++        gt_map[gid] = g
++
++    merged: List[Dict[str, Any]] = []
++    missing = 0
++    for i, p in enumerate(preds):
++        pid = _get_id(p, args.id_key) or str(i)
++        g = gt_map.get(pid)
++        row = dict(p)
++        if g is None:
++            missing += 1
++        else:
++            if "gold_raw" not in row:
++                row["gold_raw"] = (
++                    g.get("gold_raw")
++                    or g.get("answer")
++                    or g.get("output")
++                    or g.get("ground_truth")
++                    or ""
++                )
++            if "prompt" not in row:
++                row["prompt"] = g.get("prompt") or g.get("question") or g.get("input") or ""
++            row["gt_meta"] = {k: v for k, v in g.items() if k not in ("gold_raw", "prompt")}
++        merged.append(row)
++
++    out = Path(args.out_jsonl)
++    write_jsonl(out, merged)
++    print(f"wrote: {out} (n={len(merged)}), missing_gt={missing}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/LLaDA/preprocess/test/preprocess_codealpaca20k_to_llada.py b/LLaDA/tools/preprocess/legacy/test/preprocess_codealpaca20k_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/test/preprocess_codealpaca20k_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/test/preprocess_codealpaca20k_to_llada.py
+diff --git a/LLaDA/preprocess/test/preprocess_gsm8k_to_llada.py b/LLaDA/tools/preprocess/legacy/test/preprocess_gsm8k_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/test/preprocess_gsm8k_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/test/preprocess_gsm8k_to_llada.py
+diff --git a/LLaDA/preprocess/test/preprocess_math_to_llada.py b/LLaDA/tools/preprocess/legacy/test/preprocess_math_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/test/preprocess_math_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/test/preprocess_math_to_llada.py
+diff --git a/LLaDA/preprocess/train/preprocess_gsm8k_to_llada.py b/LLaDA/tools/preprocess/legacy/train/preprocess_gsm8k_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/train/preprocess_gsm8k_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/train/preprocess_gsm8k_to_llada.py
+diff --git a/LLaDA/preprocess/train/preprocess_hitab_to_llada.py b/LLaDA/tools/preprocess/legacy/train/preprocess_hitab_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/train/preprocess_hitab_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/train/preprocess_hitab_to_llada.py
+diff --git a/LLaDA/preprocess/train/preprocess_openscience_to_llada.py b/LLaDA/tools/preprocess/legacy/train/preprocess_openscience_to_llada.py
+similarity index 100%
+rename from LLaDA/preprocess/train/preprocess_openscience_to_llada.py
+rename to LLaDA/tools/preprocess/legacy/train/preprocess_openscience_to_llada.py

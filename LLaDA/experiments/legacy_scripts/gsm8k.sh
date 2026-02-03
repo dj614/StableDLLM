@@ -10,7 +10,7 @@ export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 
 accelerate launch \
-  --config_file LLaDA/accelerate_ds.yaml \
+  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
   --main_process_port 29500 \
   LLaDA/rebuttal.py \
   --seed 42 \
@@ -21,7 +21,7 @@ accelerate launch \
   --grad_accum 2
 
 accelerate launch \
-  --config_file LLaDA/accelerate_ds.yaml \
+  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
   --main_process_port 29500 \
   LLaDA/rebuttal.py \
   --seed 731 \
@@ -32,7 +32,7 @@ accelerate launch \
   --grad_accum 2
 
 accelerate launch \
-  --config_file LLaDA/accelerate_ds.yaml \
+  --config_file LLaDA/configs/accelerate/deepspeed_zero2.yaml \
   --main_process_port 29500 \
   LLaDA/rebuttal.py \
   --seed 20231 \

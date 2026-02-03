@@ -1,77 +1,59 @@
-from tqdm.auto import tqdm
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""Legacy wrapper for HiTab inference.
+
+The old version hard-coded local paths. This wrapper delegates to the unified CLI.
+
+Example:
+  python LLaDA/inference_hitab.py \
+    --checkpoint_path /path/to/ckpt \
+    --data_jsonl /path/to/hitab.jsonl \
+    --out_file outputs/eval/predictions_hitab.jsonl
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
 from pathlib import Path
-import json
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from generate import generate
 
-# ------------ 可自行修改的超参 ------------
-CHECKPOINT_PATH  = "/storage/result/checkpoints/LLaDA/seed42_instruct_hitab_MirrorMask_noIS_RespMask_EMA_bins6_blr0.01_stratified_6_train_ratio0.9_epoch5_bs32_lr_sched_linear_lr5e-05_warmup0_max_len4096_250806_075630/checkpoint-epoch5"
-DATA_PATH        = "/storage/v-mengnijia/LLaDA/data.jsonl"
-BASE_OUTPUT      = Path("/storage/v-mengnijia/LLaDA/eval/data")
-suffix           = Path(*Path(CHECKPOINT_PATH).parts[-2:])
-device    = torch.device("cuda:1")
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-MODEL_NAME       = "GSAI-ML/LLaDA-8B-Instruct"
-BATCH_SIZE       = 16       # 每 GPU 同时处理几条 prompt
-MAX_DATA         = None
-TASK             = "hitab"
-TEMP             = 0.
-GEN_LENGTH       = 512
-STEPS            = 256
-BLOCK_LENGTH     = 16
-OUTPUT_PATH      = BASE_OUTPUT / suffix / f"predictions_{TASK}_temp{TEMP}_gen{GEN_LENGTH}_steps{STEPS}_block{BLOCK_LENGTH}.jsonl"
-OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-# --------------------------------------
+from LLaDA.llada.cli.main import main as cli_main  # noqa: E402
 
-# 1. 加载 tokenizer / model
-load_path = CHECKPOINT_PATH if CHECKPOINT_PATH else MODEL_NAME
-tokenizer = AutoTokenizer.from_pretrained(load_path, trust_remote_code=True)
-model = AutoModelForCausalLM.from_pretrained(load_path, trust_remote_code=True, torch_dtype="auto")
-model.eval().to(device)
 
-# 2. 读取数据集并按 batch_size 分块
-def read_batches(path, bs):
-    with open(path, "r", encoding="utf-8") as f:
-        buf = []
-        for line in f:
-            buf.append(json.loads(line))
-            if len(buf) == bs:
-                yield buf
-                buf = []
-        if buf:                              # 处理最后一个不足 batch 的残包
-            yield buf
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--checkpoint_path", type=str, default="", help="finetuned checkpoint path (optional)")
+    ap.add_argument("--device_ids", type=int, nargs="+", default=[0])
+    ap.add_argument("--data_jsonl", type=str, required=True, help="HiTab jsonl with at least 'prompt' and gold fields")
+    ap.add_argument("--out_file", type=str, default="outputs/eval/predictions_hitab.jsonl")
+    ap.add_argument("--batch_size", type=int, default=16)
+    ap.add_argument("--gen_length", type=int, default=512)
+    ap.add_argument("--steps", type=int, default=256)
+    ap.add_argument("--block_length", type=int, default=16)
+    ap.add_argument("--temperature", type=float, default=0.0)
+    args = ap.parse_args()
 
-total_samples = sum(1 for _ in open(DATA_PATH, encoding="utf-8"))  # 1412
-if MAX_DATA is not None:
-    total_samples = min(total_samples, MAX_DATA)
-progress = tqdm(total=total_samples, desc="Samples", unit="example")
+    Path(args.out_file).parent.mkdir(parents=True, exist_ok=True)
 
-processed = 0  # 已处理样本计数
+    cli_main([
+        "infer",
+        "--task", "hitab",
+        "--data_jsonl", args.data_jsonl,
+        "--checkpoint_path", args.checkpoint_path,
+        "--device_ids", *map(str, args.device_ids),
+        "--batch_size", str(args.batch_size),
+        "--temperature", str(args.temperature),
+        "--gen_length", str(args.gen_length),
+        "--steps", str(args.steps),
+        "--block_length", str(args.block_length),
+        "--out_file", args.out_file,
+    ])
 
-# 3. 推理 + 保存
-with open(OUTPUT_PATH, "w", encoding="utf-8") as fout:
-    for batch in read_batches(DATA_PATH, BATCH_SIZE):
-        for i, item in enumerate(batch):
-            if MAX_DATA is not None and processed >= MAX_DATA:
-                break
-            prompt = item["prompt"]
-            m = [{"role": "user", "content": prompt}, ]
-            prompt = tokenizer.apply_chat_template(m, add_generation_prompt=True, tokenize=False)
-            input_ids = tokenizer(prompt)['input_ids']
-            input_ids = torch.tensor(input_ids).to(device).unsqueeze(0)
-            out = generate(model, input_ids, steps=STEPS, gen_length=GEN_LENGTH, block_length=BLOCK_LENGTH, temperature=TEMP, cfg_scale=0., remasking='low_confidence')
-            ans = tokenizer.batch_decode(out[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
-            # 写回 jsonl：保留 prompt / ground_truth，新增 prediction
-            sample = batch[i]
-            sample["prediction"] = ans
-            fout.write(json.dumps(sample, ensure_ascii=False) + "\n")
-            
-            processed += 1
-            progress.update(1)
-        
-        if MAX_DATA is not None and processed >= MAX_DATA:
-            break
 
-progress.close()
-print(f"✔ All done! 结果已保存到 {OUTPUT_PATH}")
+if __name__ == "__main__":
+    main()

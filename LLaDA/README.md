@@ -203,8 +203,4 @@ python -m LLaDA.llada.cli.main score --task gsm8k --pred_jsonl outputs/eval/pred
 bash LLaDA/scripts/run_gsm8k_eval.sh /path/to/checkpoint 0 1 2 3
 ```
 
-Legacy evaluation scripts are still available (as wrappers) for backwards compatibility:
-- `LLaDA/evaluate_gsm8k.py`
-- `LLaDA/evaluate_openscience.py`
-- `LLaDA/inference_hitab.py`
 

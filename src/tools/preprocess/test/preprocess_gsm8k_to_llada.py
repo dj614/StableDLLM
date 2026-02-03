@@ -107,7 +107,7 @@ def extract_final_answers(answer_text: str, normalize: bool=True) -> List[str]:
 # ========== 主流程 ==========
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_file", type=str, default="/storage/v-mengnijia/LLaDA/data/test/gsm8k_test_llada.jsonl", help="输出 JSONL 路径")
+    ap.add_argument("--out_file", type=str, default="./LLaDA/data/test/gsm8k_test_llada.jsonl", help="输出 JSONL 路径")
     ap.add_argument("--limit", type=int, default=None, help="仅处理前 N 条，便于试跑")
     ap.add_argument("--normalize_math", type=str, default="true",
                     help="是否做数学规范化（true/false），默认 true")

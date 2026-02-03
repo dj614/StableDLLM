@@ -29,9 +29,9 @@ fi
 PRED_JSONL="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.jsonl"
 METRICS_JSON="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.metrics.json"
 
-python -m LLaDA.llada.cli.main infer   --task gsm8k --split test   --checkpoint_path "${CKPT}"   --device_ids "${DEVICE_IDS[@]}"   --batch_size 16 --temperature 0   --gen_length 128 --steps 128 --block_length 32   --out_file "${PRED_JSONL}"
+python -m LLaDA.src.llada.cli.main infer   --task gsm8k --split test   --checkpoint_path "${CKPT}"   --device_ids "${DEVICE_IDS[@]}"   --batch_size 16 --temperature 0   --gen_length 128 --steps 128 --block_length 32   --out_file "${PRED_JSONL}"
 
-python -m LLaDA.llada.cli.main score   --task gsm8k   --pred_jsonl "${PRED_JSONL}"   --out_metrics "${METRICS_JSON}"
+python -m LLaDA.src.llada.cli.main score   --task gsm8k   --pred_jsonl "${PRED_JSONL}"   --out_metrics "${METRICS_JSON}"
 
 echo "Predictions: ${PRED_JSONL}"
 echo "Metrics:     ${METRICS_JSON}"

@@ -34,8 +34,8 @@ def encode_example(ex, tok):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--in_file",  type=str, default="/storage/v-mengnijia/LLaDA/hitab_reasoning_sft_str.jsonl")
-    ap.add_argument("--out_file", type=str, default="/storage/v-mengnijia/LLaDA/data/train/hitab_reasoning_sft_str_processed.jsonl")
+    ap.add_argument("--in_file",  type=str, default="./LLaDA/hitab_reasoning_sft_str.jsonl")
+    ap.add_argument("--out_file", type=str, default="./LLaDA/data/train/hitab_reasoning_sft_str_processed.jsonl")
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
     args = ap.parse_args()
 

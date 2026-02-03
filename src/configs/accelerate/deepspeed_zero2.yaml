@@ -4,5 +4,5 @@ num_machines: 1
 num_processes: 2
 
 deepspeed_config:
-  deepspeed_config_file: LLaDA/configs/deepspeed/zero2_cpu_offload.json
+  deepspeed_config_file: LLaDA/src/configs/deepspeed/zero2_cpu_offload.json
   zero3_init_flag: false

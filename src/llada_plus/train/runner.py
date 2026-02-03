@@ -273,8 +273,6 @@ def train(args):
                     train=True,
                     debug={},
                     pad_id=pad_id,
-                    return_sample_losses=False,
-                    loss_clip_max=getattr(args, "loss_max", None),
                     attn_mask=am,
                 )
 
@@ -289,8 +287,6 @@ def train(args):
                     train=True,
                     debug={},
                     pad_id=pad_id,
-                    return_sample_losses=False,
-                    loss_clip_max=getattr(args, "loss_max", None),
                     attn_mask=am,
                 )
                 loss2 = batched_loss_for_backpropagate(
@@ -303,56 +299,9 @@ def train(args):
                     train=True,
                     debug={},
                     pad_id=pad_id,
-                    return_sample_losses=False,
-                    loss_clip_max=getattr(args, "loss_max", None),
                     attn_mask=am,
                 )
                 loss = 0.5 * (loss1 + loss2)
-
-            elif args.train_mode == "mirror_plus":
-                use_two_mask = (fixed_t < 0.9)
-
-                _, loss1_per = batched_loss_for_backpropagate(
-                    ids,
-                    noisy1,
-                    model,
-                    p_mask,
-                    iw_t,
-                    eligible,
-                    train=True,
-                    debug={},
-                    pad_id=pad_id,
-                    return_sample_losses=True,
-                    loss_clip_max=getattr(args, "loss_max", None),
-                    attn_mask=am,
-                )
-
-                loss2_per = torch.zeros_like(loss1_per)
-                if noisy2 is not None and use_two_mask.any():
-                    idx_two = use_two_mask.nonzero(as_tuple=True)[0]
-
-                    _, loss2_sub = batched_loss_for_backpropagate(
-                        ids[idx_two],
-                        noisy2[idx_two],
-                        model,
-                        p_mask[idx_two],
-                        iw_t[idx_two],
-                        eligible[idx_two],
-                        train=True,
-                        debug={},
-                        pad_id=pad_id,
-                        return_sample_losses=True,
-                        loss_clip_max=getattr(args, "loss_max", None),
-                        attn_mask=am[idx_two],
-                    )
-                    loss2_per[idx_two] = loss2_sub
-
-                final_per_sample_loss = torch.where(
-                    use_two_mask,
-                    0.5 * (loss1_per + loss2_per),
-                    loss1_per,
-                )
-                loss = final_per_sample_loss.mean()
 
             accelerator.backward(loss)
 

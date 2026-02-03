@@ -27,7 +27,6 @@ def parse_args():
     ap.add_argument("--train_data_path", type=str, default=None)
     ap.add_argument("--max_len", type=int, default=4096)
     ap.add_argument("--epochs", type=int, default=5)
-    ap.add_argument("--loss_max", type=float, default=10.0, help="样本级 loss 的最大值；None 表示不裁剪")
     ap.add_argument("--train_ratio", type=float, default=0.9)
     ap.add_argument("--batch_size_per_gpu", type=int, required=True)
     ap.add_argument("--grad_accum", type=int, required=True)

@@ -32,7 +32,7 @@ def encode_example(question, answer, tok):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_file", type=str, default="/root/workspace/data/train/gsm8k.jsonl")
+    ap.add_argument("--out_file", type=str, default="./data/train/gsm8k.jsonl")
     ap.add_argument("--split", type=str, default="train", choices=["train", "test"])
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")

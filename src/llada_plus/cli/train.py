@@ -53,5 +53,5 @@ def parse_args():
         args.eval_steps = args.save_steps
 
     if args.train_data_path is None:
-        args.train_data_path = f"/root/workspace/data/train/{args.task}.jsonl"
+        args.train_data_path = f"./data/train/{args.task}.jsonl"
     return args

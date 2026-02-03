@@ -33,7 +33,7 @@ def encode_example(ex, tok):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_file", type=str, default="/root/workspace/data/train/openscience.jsonl")
+    ap.add_argument("--out_file", type=str, default="./data/train/openscience.jsonl")
     ap.add_argument("--model_path", type=str, default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--max_num", type=int, default=5000)
     ap.add_argument("--max_len", type=int, default=8192)

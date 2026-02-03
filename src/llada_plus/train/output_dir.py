@@ -15,12 +15,12 @@ def make_output_dir_and_broadcast(args, accelerator) -> Path:
     if accelerator.is_main_process and args.output_dir is None:
         if args.PPOTS:
             args.output_dir = (
-                f"/root/workspace/checkpoints/"
+                f"./checkpoints/"
                 f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}_PPOTS"
             )
         else:
             args.output_dir = (
-                f"/root/workspace/checkpoints/"
+                f"./checkpoints/"
                 f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}"
             )
     args.output_dir = broadcast_object_list([args.output_dir])[0]

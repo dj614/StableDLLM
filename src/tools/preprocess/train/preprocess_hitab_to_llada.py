@@ -30,7 +30,7 @@ import os
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from llada_plus.utils.sft_format import encode_sft_pair
+from llada.plus.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()

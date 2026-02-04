@@ -15,7 +15,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 
-from llada_plus.diffusion.masking import MASK_TOKEN_ID
+from llada.plus.diffusion.masking import MASK_TOKEN_ID
 
 
 def batched_loss_for_backpropagate(

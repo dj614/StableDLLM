@@ -9,7 +9,7 @@ Transformers/Accelerate/DeepSpeed or downloading any HuggingFace checkpoint.
 
 Run (from repo root):
 
-  PYTHONPATH=src python -m llada_plus.debug.smoke_test
+  PYTHONPATH=src python -m llada.plus.debug.smoke_test
 """
 
 from __future__ import annotations
@@ -23,9 +23,9 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from llada_plus.data import LLaDADataset, collate_fn, sample_multi_from_jsonl
-from llada_plus.diffusion import forward_process
-from llada_plus.losses import batched_loss_for_backpropagate
+from llada.plus.data import LLaDADataset, collate_fn, sample_multi_from_jsonl
+from llada.plus.diffusion import forward_process
+from llada.plus.losses import batched_loss_for_backpropagate
 
 
 class ToyLM(torch.nn.Module):

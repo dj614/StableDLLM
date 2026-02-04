@@ -20,12 +20,12 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam
 from tqdm.auto import tqdm
 import wandb
 
-from llada_plus.data import LLaDADataset, collate_fn
-from llada_plus.diffusion import MASK_TOKEN_ID, forward_process
-from llada_plus.importance_sampling import evaluate_over_x0, fit_p_of_t
-from llada_plus.losses import batched_loss_for_backpropagate
-from llada_plus.utils.seed import set_random_seed
-from llada_plus.train.output_dir import make_output_dir_and_broadcast
+from llada.plus.data import LLaDADataset, collate_fn
+from llada.plus.diffusion import MASK_TOKEN_ID, forward_process
+from llada.plus.importance_sampling import evaluate_over_x0, fit_p_of_t
+from llada.plus.losses import batched_loss_for_backpropagate
+from llada.plus.utils.seed import set_random_seed
+from llada.plus.train.output_dir import make_output_dir_and_broadcast
 
 
 def train(args):

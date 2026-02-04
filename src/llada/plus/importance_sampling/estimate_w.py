@@ -15,8 +15,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from llada_plus.data import sample_multi_from_jsonl
-from llada_plus.diffusion.masking import MASK_TOKEN_ID
+from llada.plus.data import sample_multi_from_jsonl
+from llada.plus.diffusion.masking import MASK_TOKEN_ID
 
 
 @torch.no_grad()

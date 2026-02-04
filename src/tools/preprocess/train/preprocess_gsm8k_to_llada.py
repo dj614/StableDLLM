@@ -23,7 +23,7 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 from tqdm import tqdm
 
-from llada_plus.utils.sft_format import encode_sft_pair
+from llada.plus.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()

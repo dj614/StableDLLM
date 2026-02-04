@@ -1,8 +1,8 @@
-"""llada_plus: training utilities extracted from the original monolithic script.
+"""llada.plus: training utilities extracted from the original monolithic script.
 
 This package is intentionally lightweight and import-safe:
 - Core algorithmic components live under subpackages (data/diffusion/losses/...).
-- Training orchestration lives under llada_plus.train.
+- Training orchestration lives under llada.plus.train.
 """
 
 __all__ = [

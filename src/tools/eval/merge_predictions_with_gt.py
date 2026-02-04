@@ -25,7 +25,7 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from llada.utils.io import iter_jsonl, write_jsonl  # noqa: E402
+from core.utils.io import iter_jsonl, write_jsonl  # noqa: E402
 
 
 def _get_id(row: Dict[str, Any], key: str) -> Optional[str]:

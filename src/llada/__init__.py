@@ -9,4 +9,4 @@ If you run scripts from repo root, make sure `src/` is on `PYTHONPATH`, e.g.:
   PYTHONPATH=src:$PYTHONPATH python -m llada.cli.main --help
 """
 
-__all__ = ["cli", "eval", "model", "tasks", "utils"]
+__all__ = ["cli", "eval", "tasks"]

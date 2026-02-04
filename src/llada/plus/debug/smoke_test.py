@@ -24,8 +24,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from llada.plus.data import LLaDADataset, collate_fn, sample_multi_from_jsonl
-from llada.plus.diffusion import forward_process
-from llada.plus.losses import batched_loss_for_backpropagate
+from core.diffusion import forward_process
+from core.losses import batched_loss_for_backpropagate
 
 
 class ToyLM(torch.nn.Module):

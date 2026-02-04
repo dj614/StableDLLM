@@ -2,7 +2,7 @@
 
 This package is intentionally lightweight and import-safe:
 - Core algorithmic components live under subpackages (data/diffusion/losses/...).
-- Training orchestration lives under llada.plus.train.
+- Training orchestration lives under core.train.
 """
 
 __all__ = [

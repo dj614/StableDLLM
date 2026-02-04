@@ -19,7 +19,7 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from llada.utils.hf import maybe_enable_hf_mirror_china
+from core.utils.hf import maybe_enable_hf_mirror_china
 
 maybe_enable_hf_mirror_china(sys.argv)
 
@@ -30,7 +30,7 @@ import os
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from llada.plus.utils.sft_format import encode_sft_pair
+from core.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()

@@ -1,32 +1,19 @@
+"""Deprecated shim for JSONL helpers.
+
+Prefer importing from :mod:`mdm.utils.io` (or :mod:`mdm.eval.io`).
+This module remains for backwards compatibility.
+"""
+
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Optional
+import warnings
 
+from mdm.utils.io import iter_jsonl, read_jsonl, write_jsonl
 
-def iter_jsonl(path: str | Path) -> Iterator[Dict[str, Any]]:
-    path = Path(path)
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            yield json.loads(line)
+warnings.warn(
+    "llada.utils.io is deprecated; use mdm.utils.io (or mdm.eval.io) instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def read_jsonl(path: str | Path, max_rows: Optional[int] = None) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
-    for i, row in enumerate(iter_jsonl(path)):
-        rows.append(row)
-        if max_rows is not None and (i + 1) >= max_rows:
-            break
-    return rows
-
-
-def write_jsonl(path: str | Path, rows: Iterable[Dict[str, Any]]) -> None:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+__all__ = ["iter_jsonl", "read_jsonl", "write_jsonl"]

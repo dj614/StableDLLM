@@ -24,8 +24,8 @@ from llada.plus.data import LLaDADataset, collate_fn
 from llada.plus.diffusion import MASK_TOKEN_ID, forward_process
 from llada.plus.importance_sampling import evaluate_over_x0, fit_p_of_t
 from llada.plus.losses import batched_loss_for_backpropagate
-from llada.plus.utils.seed import set_random_seed
-from llada.plus.train.output_dir import make_output_dir_and_broadcast
+from mdm.utils.seed import set_random_seed
+from mdm.utils.output_dir import make_output_dir_and_broadcast
 
 
 def train(args):

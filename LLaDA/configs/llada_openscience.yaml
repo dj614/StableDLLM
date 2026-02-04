@@ -1,0 +1,5 @@
+# LLaDA task overlay: OpenScience.
+
+train:
+  task: openscience
+  train_data_path: ./data/train/openscience.jsonl

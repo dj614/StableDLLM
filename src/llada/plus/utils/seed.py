@@ -1,24 +1,18 @@
-"""Reproducibility utilities."""
+"""Deprecated shim for reproducibility helpers.
+
+Prefer importing from :mod:`mdm.utils.seed`.
+"""
 
 from __future__ import annotations
 
-import random
+import warnings
 
-import numpy as np
-import torch
+from mdm.utils.seed import set_random_seed
 
+warnings.warn(
+    "llada.plus.utils.seed is deprecated; use mdm.utils.seed instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def set_random_seed(seed: int, rank: int = 0) -> None:
-    """Set Python/NumPy/PyTorch RNG seeds.
-
-    We follow the exact behavior from the original training script:
-    - seed is offset by distributed rank
-    - enable deterministic cuDNN behavior
-    """
-    s = int(seed) + int(rank)
-    random.seed(s)
-    np.random.seed(s)
-    torch.manual_seed(s)
-    torch.cuda.manual_seed_all(s)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+__all__ = ["set_random_seed"]

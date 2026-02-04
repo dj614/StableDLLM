@@ -1,0 +1,53 @@
+# Framework default training config (Step 7).
+#
+# NOTE (Step 8): For base+overlay config layering, prefer:
+#   - src/configs/mdm/base/train_llada_plus.yaml   (base)
+#   - LLaDA/configs/llada_*.yaml                    (task overlays)
+#
+# This file is kept for backward compatibility and as a single-file starting point.
+
+engine: llada_plus
+
+# Optional global mirror toggle. The runner also accepts train.china.
+china: false
+
+train:
+  # Required
+  seed: 42
+  task: gsm8k
+  batch_size_per_gpu: 1
+  grad_accum: 1
+
+  # Runner options (see src/llada/plus/cli/train.py)
+  model: llada
+  train_mode: Normal
+  PPOTS: false
+  p_model: EPR
+
+  max_tokens_per_forward: 60000
+  max_is_weight: 1000000.0
+  n_starts: 20
+  num_samples_x0: 10
+  num_samples_t: 30
+  num_samples_xt: 10
+  mix_uniform: 0.0
+
+  train_data_path: null
+  max_len: 4096
+  epochs: 1
+  train_ratio: 0.9
+
+  lr_scheduler_type: linear
+  lr: 5.0e-5
+  warmup_steps: 0
+
+  eval_strategy: epoch
+  eval_steps: null
+
+  save_strategy: last
+  save_steps: 100
+
+  output_dir: null
+  logging_steps: 5
+
+  china: false

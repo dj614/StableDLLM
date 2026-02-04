@@ -1,29 +1,18 @@
-"""Output directory creation and broadcast for distributed runs."""
+"""Deprecated shim for output directory helpers.
+
+Prefer importing from :mod:`mdm.utils.output_dir`.
+"""
 
 from __future__ import annotations
 
-from pathlib import Path
+import warnings
 
-from accelerate.utils import broadcast_object_list
+from mdm.utils.output_dir import make_output_dir_and_broadcast
 
+warnings.warn(
+    "llada.plus.train.output_dir is deprecated; use mdm.utils.output_dir instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def make_output_dir_and_broadcast(args, accelerator) -> Path:
-    """Create the output dir and broadcast its path to all ranks.
-
-    Keeps the same default naming scheme as the original script.
-    """
-    if accelerator.is_main_process and args.output_dir is None:
-        if args.PPOTS:
-            args.output_dir = (
-                f"./checkpoints/"
-                f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}_PPOTS"
-            )
-        else:
-            args.output_dir = (
-                f"./checkpoints/"
-                f"seed{args.seed}_{args.model}_{args.task}_{args.train_mode}"
-            )
-    args.output_dir = broadcast_object_list([args.output_dir])[0]
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
+__all__ = ["make_output_dir_and_broadcast"]

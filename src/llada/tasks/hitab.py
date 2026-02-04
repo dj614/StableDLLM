@@ -1,15 +1,24 @@
+"""Deprecated shim for HiTab dataset adapter.
+
+Canonical implementation lives in ``LLaDA/llada/tasks/hitab.py``.
+"""
+
 from __future__ import annotations
 
-from typing import Iterator, Optional
+import warnings
 
-from ..utils.io import iter_jsonl
-from .registry import TaskExample
+try:
+    from LLaDA.llada.tasks.hitab import iter_hitab  # type: ignore
+except Exception as e:  # pragma: no cover
+    raise ImportError(
+        "Failed to import LLaDA.llada.tasks.hitab. "
+        "Make sure you run from repo root with PYTHONPATH including both 'src/' and the repo root ('.')."
+    ) from e
 
+warnings.warn(
+    "llada.tasks.hitab is deprecated; use LLaDA.llada.tasks.hitab instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def iter_hitab(data_jsonl: str, max_samples: Optional[int] = None) -> Iterator[TaskExample]:
-    for i, row in enumerate(iter_jsonl(data_jsonl)):
-        if max_samples is not None and i >= max_samples:
-            break
-        prompt = row.get("prompt") or row.get("question") or row.get("input") or ""
-        gold_raw = row.get("gold_raw") or row.get("answer") or row.get("output") or row.get("ground_truth") or ""
-        yield TaskExample(prompt=prompt, gold_raw=gold_raw, meta={"index": i, "raw": row})
+__all__ = ["iter_hitab"]

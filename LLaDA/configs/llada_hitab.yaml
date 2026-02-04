@@ -1,0 +1,5 @@
+# LLaDA task overlay: HiTab.
+
+train:
+  task: hitab
+  train_data_path: ./data/train/hitab.jsonl

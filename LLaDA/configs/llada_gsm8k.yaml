@@ -1,0 +1,10 @@
+# LLaDA task overlay: GSM8K.
+#
+# Apply on top of the MDM base config:
+#   --config src/configs/mdm/base/train_llada_plus.yaml \
+#   --config LLaDA/configs/llada_gsm8k.yaml
+
+train:
+  task: gsm8k
+  # Optional: explicit data path (runner also defaults to ./data/train/{task}.jsonl)
+  train_data_path: ./data/train/gsm8k.jsonl

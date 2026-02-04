@@ -12,7 +12,12 @@ from ..tasks.registry import iter_task_examples
 from ..utils.io import iter_jsonl, write_jsonl
 from ..eval.metrics import score_gsm8k, score_hitab, score_openscience
 
-from ...generate import generate  # reuse existing sampler
+try:
+    # The original sampler lives in the top-level `LLaDA/` package in this repo.
+    from LLaDA.generate import generate  # type: ignore
+except Exception:  # pragma: no cover
+    # Fallback for alternative layouts where `generate` is importable directly.
+    from generate import generate  # type: ignore
 
 
 DEFAULT_MODEL_NAME = "GSAI-ML/LLaDA-8B-Instruct"

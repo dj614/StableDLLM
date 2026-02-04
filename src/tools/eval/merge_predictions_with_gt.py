@@ -8,7 +8,7 @@ This is intentionally lightweight and filesystem-friendly:
 - supports matching by an id key (default: "id"), falling back to meta.index then line index.
 
 Run from repo root:
-  python LLaDA/tools/eval/merge_predictions_with_gt.py --pred_jsonl ... --gt_jsonl ... --out_jsonl ...
+  python src/tools/eval/merge_predictions_with_gt.py --pred_jsonl ... --gt_jsonl ... --out_jsonl ...
 """
 
 from __future__ import annotations
@@ -18,12 +18,14 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Allow running as a script from anywhere:
+# Allow running as a script from repo root without installing the package.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_SRC_DIR = _REPO_ROOT / "src"
+for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from LLaDA.llada.utils.io import iter_jsonl, write_jsonl  # noqa: E402
+from llada.utils.io import iter_jsonl, write_jsonl  # noqa: E402
 
 
 def _get_id(row: Dict[str, Any], key: str) -> Optional[str]:

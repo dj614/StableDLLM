@@ -1,59 +1,58 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""
-把 HiTab JSONL ➜ LLaDA SFT 所需格式
-------------------------------------------------
+"""HiTab JSONL ➜ LLaDA SFT 所需格式。
+
 输入:  每行 {"prompt": "...", "response": "..."}
-输出:  同目录  *.jsonl  （键: input_ids, prompt_length）
+输出:  JSONL （键: input_ids, prompt_length）
+
 用法:
-    python3 preprocess_hitab_to_llada.py
+    python3 preprocess_hitab_to_llada.py --in_file ... --out_file ...
 """
-import argparse, json, sys, tqdm, os
+
+import sys
+from pathlib import Path
+
+# Allow running from repo root without installing the package.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_SRC_DIR = _REPO_ROOT / "src"
+for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+from llada.utils.hf import maybe_enable_hf_mirror_china
+
+maybe_enable_hf_mirror_china(sys.argv)
+
+import argparse
+import json
+import os
+
+from tqdm import tqdm
 from transformers import AutoTokenizer
 
-SPECIAL = dict(
-    BOS="<s>",               # tokenizer.bos_token
-    EOS="</s>",              # tokenizer.eos_token
-    START_USER="<start_id>user<end_id>\n",
-    START_ASSIST="<start_id>assistant<end_id>\n",
-    EOT="<eot_id>",          # end-of-turn
-)
-
-def encode_example(ex, tok):
-    prompt_txt   = ex["prompt"]
-    answer_txt   = ex["response"]
-
-    user_part  = SPECIAL["BOS"] + SPECIAL["START_USER"] + prompt_txt + SPECIAL["EOT"]
-    asst_part  = SPECIAL["START_ASSIST"] + answer_txt + SPECIAL["EOS"]
-
-    user_ids  = tok(user_part , add_special_tokens=False).input_ids
-    asst_ids  = tok(asst_part, add_special_tokens=False).input_ids
-    ids       = user_ids + asst_ids
-    prompt_len = len(user_ids)
-    return dict(input_ids=ids, prompt_length=prompt_len)
+from llada_plus.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in_file",  type=str, default="./LLaDA/hitab_reasoning_sft_str.jsonl")
     ap.add_argument("--out_file", type=str, default="./LLaDA/data/train/hitab_reasoning_sft_str_processed.jsonl")
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
+    ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True, trust_remote_code=True)
 
-    out_f = open(args.out_file, "w", encoding="utf8")
-    kept, skipped = 0, 0
-    with open(args.in_file, "r", encoding="utf8") as f:
-        for line in tqdm.tqdm(f, desc="convert"):
+    os.makedirs(os.path.dirname(args.out_file) or ".", exist_ok=True)
+    kept = 0
+    with open(args.in_file, "r", encoding="utf8") as f, open(
+        args.out_file, "w", encoding="utf8"
+    ) as out_f:
+        for line in tqdm(f, desc="convert"):
             ex = json.loads(line)
-            item = encode_example(ex, tok)
-            if item is None:
-                skipped += 1
-                continue
+            item = encode_sft_pair(ex["prompt"], ex["response"], tok, strip=False)
             out_f.write(json.dumps(item, ensure_ascii=False) + "\n")
             kept += 1
-    out_f.close()
-    print(f"✓ 完成: 写入 {kept} 条")
+    print(f"✓ 完成: 写入 {kept} 条 -> {args.out_file}")
 
 if __name__ == "__main__":
     main()

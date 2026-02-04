@@ -1,34 +1,29 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os, sys
+import sys
+from pathlib import Path
 
-# >>> 镜像配置（必须在 import datasets/transformers 前） <<<
-if "--china" in sys.argv:
-    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-    os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
-    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+# Allow running from repo root without installing the package.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_SRC_DIR = _REPO_ROOT / "src"
+for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-import argparse, json, tqdm
+from llada.utils.hf import maybe_enable_hf_mirror_china
+
+maybe_enable_hf_mirror_china(sys.argv)
+
+import os
+import argparse
+import json
+
 from datasets import load_dataset
 from transformers import AutoTokenizer
+from tqdm import tqdm
 
-
-SPECIAL = dict(
-    BOS="<s>",
-    EOS="</s>",
-    START_USER="<start_id>user<end_id>\n",
-    START_ASSIST="<start_id>assistant<end_id>\n",
-    EOT="<eot_id>",
-)
-
-def encode_example(ex, tok):
-    user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + ex["input"] + SPECIAL["EOT"]
-    asst_part = SPECIAL["START_ASSIST"] + ex["output"] + SPECIAL["EOS"]
-
-    user_ids = tok(user_part, add_special_tokens=False).input_ids
-    asst_ids = tok(asst_part, add_special_tokens=False).input_ids
-    return user_ids + asst_ids, len(user_ids)
+from llada_plus.utils.sft_format import encode_sft_pair
 
 
 def main():
@@ -54,17 +49,13 @@ def main():
 
     kept = 0
     with open(args.out_file, "w", encoding="utf8") as out_f:
-        for ex in tqdm.tqdm(stream_ds, desc="streaming-filter"):
+        for ex in tqdm(stream_ds, desc="streaming-filter"):
 
-            input_ids, prompt_len = encode_example(ex, tok)
-
-            if len(input_ids) >= args.max_len:
+            item = encode_sft_pair(ex["input"], ex["output"], tok)
+            if len(item["input_ids"]) >= args.max_len:
                 continue
 
-            out_f.write(json.dumps(
-                {"input_ids": input_ids, "prompt_length": prompt_len},
-                ensure_ascii=False
-            ) + "\n")
+            out_f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
             kept += 1
             if kept >= args.max_num:

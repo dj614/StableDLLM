@@ -1,34 +1,29 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import os, sys
+import sys
+from pathlib import Path
 
-if "--china" in sys.argv:
-    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-    os.environ["HF_HUB_ENDPOINT"] = "https://hf-mirror.com"
-    os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+# Allow running from repo root without installing the package.
+_REPO_ROOT = Path(__file__).resolve().parents[4]
+_SRC_DIR = _REPO_ROOT / "src"
+for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-import argparse, json, tqdm
+from llada.utils.hf import maybe_enable_hf_mirror_china
+
+maybe_enable_hf_mirror_china(sys.argv)
+
+import os
+import argparse
+import json
+
 from datasets import load_dataset
 from transformers import AutoTokenizer
+from tqdm import tqdm
 
-
-SPECIAL = dict(
-    BOS="<s>",
-    EOS="</s>",
-    START_USER="<start_id>user<end_id>\n",
-    START_ASSIST="<start_id>assistant<end_id>\n",
-    EOT="<eot_id>",
-)
-
-def encode_example(question, answer, tok):
-    user_part = SPECIAL["BOS"] + SPECIAL["START_USER"] + question.strip() + "\n" + SPECIAL["EOT"]
-    asst_part = SPECIAL["START_ASSIST"] + answer.strip() + "\n" + SPECIAL["EOS"]
-    
-    user_ids = tok(user_part, add_special_tokens=False).input_ids
-    asst_ids = tok(asst_part, add_special_tokens=False).input_ids
-    ids = user_ids + asst_ids
-    return dict(input_ids=ids, prompt_length=len(user_ids))
+from llada_plus.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()
@@ -52,8 +47,15 @@ def main():
 
     with open(args.out_file, "w", encoding="utf8") as out_f:
         kept = 0
-        for ex in tqdm.tqdm(dataset, desc="Converting"):
-            item = encode_example(ex["question"], ex["answer"], tok)
+        for ex in tqdm(dataset, desc="Converting"):
+            item = encode_sft_pair(
+                ex["question"],
+                ex["answer"],
+                tok,
+                user_suffix="\n",
+                assistant_suffix="\n",
+                strip=True,
+            )
             out_f.write(json.dumps(item, ensure_ascii=False) + "\n")
             kept += 1
 

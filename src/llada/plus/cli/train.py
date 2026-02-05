@@ -24,6 +24,12 @@ def parse_args():
     ap.add_argument("--num_samples_t", type=int, default=30)
     ap.add_argument("--num_samples_xt", type=int, default=10)
     ap.add_argument("--mix_uniform", type=float, default=0.0)
+    ap.add_argument(
+        "--loss_max",
+        type=float,
+        default=10.0,
+        help="(PPOTS) sample-level loss clamp used when estimating w(t)",
+    )
     ap.add_argument("--train_data_path", type=str, default=None)
     ap.add_argument("--max_len", type=int, default=4096)
     ap.add_argument("--epochs", type=int, default=5)

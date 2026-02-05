@@ -55,6 +55,10 @@ def _fill_defaults(a: MutableMapping[str, Any]) -> None:
         if task:
             a["train_data_path"] = f"./data/train/{task}.jsonl"
 
+    # Used by PPOTS (IS-on-t) when estimating w(t) statistics.
+    if a.get("loss_max") is None:
+        a["loss_max"] = 10.0
+
 
 def _require(a: Mapping[str, Any], key: str) -> None:
     if key not in a or a[key] is None:

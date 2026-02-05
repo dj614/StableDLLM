@@ -101,7 +101,16 @@ def batched_losses_for_many_noisy(
 
             rows_with = mask_chunk.any(dim=1)
             if rows_with.any():
-                loss_vec = (loss_b[rows_with] / denom[rows_with]).clamp_max(args.loss_max)
+                loss_vec = (loss_b[rows_with] / denom[rows_with])
+                # NOTE: older configs/entrypoints may not define loss_max.
+                loss_max = getattr(args, "loss_max", None)
+                if loss_max is not None:
+                    try:
+                        loss_max_f = float(loss_max)
+                    except Exception:
+                        loss_max_f = None
+                    if loss_max_f is not None and loss_max_f == loss_max_f:  # not NaN
+                        loss_vec = loss_vec.clamp_max(loss_max_f)
                 chunk = losses_row[i:j]
                 chunk[rows_with] = loss_vec
                 losses_row[i:j] = chunk

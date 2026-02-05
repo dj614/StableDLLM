@@ -12,6 +12,7 @@ on ``PYTHONPATH``, e.g.:
   PYTHONPATH=src:. python -m llada.cli.main --help
 """
 
+<<<<<<< HEAD
 from __future__ import annotations
 
 import sys
@@ -24,3 +25,6 @@ if str(_repo_root) not in sys.path:
     sys.path.insert(0, str(_repo_root))
 
 __all__ = ["cli", "eval", "model", "tasks", "utils", "plus"]
+=======
+__all__ = ["cli", "eval", "tasks"]
+>>>>>>> 31bc6818f4abfc6e39eea2cd09727693801ec40c

@@ -17,7 +17,7 @@ if _SRC.exists():
 
 
 from llada.plus.cli.train import parse_args  # noqa: E402
-from llada.plus.train.runner import train  # noqa: E402
+from core.train.runner import train  # noqa: E402
 
 
 def main() -> None:

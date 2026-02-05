@@ -3,7 +3,7 @@
 This is meant for debugging the data plumbing + masking diffusion + loss + forward pass
 without requiring Transformers/Accelerate/DeepSpeed or downloading any checkpoints.
 
-It follows the same high-level structure as `llada.plus.train.runner.train`:
+It follows the same high-level structure as `core.train.runner.train`:
   1) load processed JSONL -> split train/eval
   2) DataLoader + collate_fn
   3) forward_process (masking diffusion)
@@ -33,8 +33,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from llada.plus.data import LLaDADataset, collate_fn
-from llada.plus.diffusion import MASK_TOKEN_ID, forward_process
-from llada.plus.losses import batched_loss_for_backpropagate
+from core.diffusion import MASK_TOKEN_ID, forward_process
+from core.losses import batched_loss_for_backpropagate
 
 
 class ToyLM(torch.nn.Module):

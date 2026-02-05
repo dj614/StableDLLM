@@ -25,11 +25,7 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-<<<<<<< HEAD
 from mdm.utils.io import iter_jsonl, write_jsonl  # noqa: E402
-=======
-from core.utils.io import iter_jsonl, write_jsonl  # noqa: E402
->>>>>>> 31bc6818f4abfc6e39eea2cd09727693801ec40c
 
 
 def _get_id(row: Dict[str, Any], key: str) -> Optional[str]:

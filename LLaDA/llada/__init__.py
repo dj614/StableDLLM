@@ -6,8 +6,8 @@ This package is intentionally lightweight at Step 5 of the refactor:
 * This package provides a place for LLaDA-specific task specs, dataset adapters,
   and metric logic.
 
-At this stage, we only provide a registration entry point that bridges to the
-legacy scoring implementation under ``src/llada``.
+At this stage, we provide a registration entry point that registers the
+task-pack TaskSpec implementations directly.
 
 Import :mod:`LLaDA.llada.register` (or call :func:`LLaDA.llada.register.register_all`)
 so the tasks become available via :func:`mdm.registry.get_task`.

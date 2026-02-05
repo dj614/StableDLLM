@@ -16,8 +16,8 @@ if _SRC.exists():
     sys.path.insert(0, str(_SRC))
 
 
-from llada.plus.cli.train import parse_args  # noqa: E402
-from core.train.runner import train  # noqa: E402
+from mdm.engines.llada_plus.cli.train import parse_args  # noqa: E402
+from mdm.engines.llada_plus.runner import train  # noqa: E402
 
 
 def main() -> None:

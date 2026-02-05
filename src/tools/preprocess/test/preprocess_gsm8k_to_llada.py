@@ -30,7 +30,7 @@ import os
 from datasets import load_dataset
 from tqdm import tqdm
 
-from core.utils.answer_norm import extract_hash4_answers
+from mdm.utils.answer_norm import extract_hash4_answers
 
 # ========== 主流程 ==========
 def main():

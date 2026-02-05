@@ -1,6 +1,6 @@
 """Random seeding helpers.
 
-The training runner under ``llada.plus`` expects :func:`set_random_seed` to live
+The training runner under ``mdm.engines.llada_plus`` expects :func:`set_random_seed` to live
 in :mod:`mdm.utils.seed`.
 """
 

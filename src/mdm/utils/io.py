@@ -1,7 +1,7 @@
 """Lightweight JSONL I/O helpers.
 
-Several modules in this repo import :mod:`mdm.utils.io` (preprocess tools,
-evaluation helpers, and deprecated shims under ``llada.utils``). The refactor
+Several modules in this repo import :mod:`mdm.utils.io` (preprocess tools and
+evaluation helpers). The refactor
 introduced the namespace but the concrete file was missing in this zip.
 
 These helpers intentionally stay dependency-light (stdlib only).

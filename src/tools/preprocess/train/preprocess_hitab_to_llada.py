@@ -19,13 +19,7 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-<<<<<<< HEAD
 from mdm.utils.hf import maybe_enable_hf_mirror_china
-=======
-from core.utils.hf import maybe_enable_hf_mirror_china
->>>>>>> 31bc6818f4abfc6e39eea2cd09727693801ec40c
-
-maybe_enable_hf_mirror_china(sys.argv)
 
 import argparse
 import json
@@ -34,7 +28,7 @@ import os
 from tqdm import tqdm
 from transformers import AutoTokenizer
 
-from core.utils.sft_format import encode_sft_pair
+from mdm.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()
@@ -43,6 +37,8 @@ def main():
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")
     args = ap.parse_args()
+
+    maybe_enable_hf_mirror_china(args.china)
 
     tok = AutoTokenizer.from_pretrained(args.model_path, use_fast=True, trust_remote_code=True)
 

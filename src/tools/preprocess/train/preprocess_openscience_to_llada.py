@@ -11,13 +11,7 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-<<<<<<< HEAD
 from mdm.utils.hf import maybe_enable_hf_mirror_china
-=======
-from core.utils.hf import maybe_enable_hf_mirror_china
->>>>>>> 31bc6818f4abfc6e39eea2cd09727693801ec40c
-
-maybe_enable_hf_mirror_china(sys.argv)
 
 import os
 import argparse
@@ -27,7 +21,7 @@ from datasets import load_dataset
 from transformers import AutoTokenizer
 from tqdm import tqdm
 
-from core.utils.sft_format import encode_sft_pair
+from mdm.utils.sft_format import encode_sft_pair
 
 
 def main():
@@ -38,6 +32,8 @@ def main():
     ap.add_argument("--max_len", type=int, default=8192)
     ap.add_argument("--china", action="store_true")
     args = ap.parse_args()
+
+    maybe_enable_hf_mirror_china(args.china)
 
     # 确保输出路径存在
     os.makedirs(os.path.dirname(args.out_file), exist_ok=True)

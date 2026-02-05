@@ -18,7 +18,7 @@ train:
   batch_size_per_gpu: 1
   grad_accum: 1
 
-  # Runner options (see src/llada/plus/cli/train.py)
+  # Runner options (see src/mdm/engines/llada_plus/cli/train.py)
   model: llada
   train_mode: Normal
   PPOTS: false

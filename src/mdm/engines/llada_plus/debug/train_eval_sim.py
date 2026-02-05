@@ -1,9 +1,9 @@
-"""Simulate the *training loop* and the *inference/eval loop* end-to-end on a tiny JSONL.
+"""Simulate the training loop and the inference/eval loop on a tiny JSONL.
 
 This is meant for debugging the data plumbing + masking diffusion + loss + forward pass
 without requiring Transformers/Accelerate/DeepSpeed or downloading any checkpoints.
 
-It follows the same high-level structure as `core.train.runner.train`:
+It follows the same high-level structure as `mdm.engines.llada_plus.runner.train`:
   1) load processed JSONL -> split train/eval
   2) DataLoader + collate_fn
   3) forward_process (masking diffusion)
@@ -12,11 +12,11 @@ It follows the same high-level structure as `core.train.runner.train`:
 
 Run (from repo root):
 
-  PYTHONPATH=src python -m llada.plus.debug.train_eval_sim
+  PYTHONPATH=src python -m mdm.engines.llada_plus.debug.train_eval_sim
 
 You can also point it to your processed jsonl:
 
-  PYTHONPATH=src python -m llada.plus.debug.train_eval_sim --jsonl ./data/train/gsm8k.jsonl
+  PYTHONPATH=src python -m mdm.engines.llada_plus.debug.train_eval_sim --jsonl ./data/train/gsm8k.jsonl
 """
 
 from __future__ import annotations
@@ -32,9 +32,9 @@ from typing import Dict, Tuple
 import torch
 from torch.utils.data import DataLoader
 
-from llada.plus.data import LLaDADataset, collate_fn
-from core.diffusion import MASK_TOKEN_ID, forward_process
-from core.losses import batched_loss_for_backpropagate
+from mdm.engines.llada_plus.data import LLaDADataset, collate_fn
+from mdm.engines.llada_plus.diffusion import MASK_TOKEN_ID, forward_process
+from mdm.engines.llada_plus.losses import batched_loss_for_backpropagate
 
 
 class ToyLM(torch.nn.Module):

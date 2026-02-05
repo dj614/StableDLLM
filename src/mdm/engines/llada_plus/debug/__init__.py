@@ -1,4 +1,4 @@
-"""Legacy LLaDA CLI."""
+"""Debug helpers for the LLaDA+ engine."""
 
 from __future__ import annotations
 

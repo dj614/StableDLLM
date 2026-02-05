@@ -1,6 +1,6 @@
-"""Training engine entrypoint: legacy LLaDA masked diffusion runner.
+"""Training engine entrypoint: LLaDA+ masked diffusion runner.
 
-This engine reuses the existing implementation under ``src/llada/plus``.
+This engine uses the implementation under ``src/mdm/engines/llada_plus``.
 
 Step 7 goal: make the *entrypoint* live under ``mdm`` so training can be
 configured and dispatched in a task-agnostic way.
@@ -15,7 +15,7 @@ The merged config should look like:
       task: gsm8k
       batch_size_per_gpu: 1
       grad_accum: 1
-      ... (fields compatible with llada.plus.cli.train.parse_args)
+      ... (fields compatible with mdm.engines.llada_plus.cli.train.parse_args)
 
 The runner is invoked with an ``argparse.Namespace`` built from ``train``.
 """
@@ -35,7 +35,7 @@ def _flatten_train_cfg(cfg: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _fill_defaults(a: MutableMapping[str, Any]) -> None:
-    # Mirror the defaults/normalization in llada.plus.cli.train.parse_args.
+    # Mirror the defaults/normalization in mdm.engines.llada_plus.cli.train.parse_args.
     if a.get("model") is None:
         a["model"] = "llada"
     if a.get("train_mode") is None:
@@ -69,7 +69,7 @@ def train_from_config(cfg: Mapping[str, Any]) -> Any:
     """Dispatch training using the llada_plus engine."""
 
     # Import lazily so `--dump_config` remains lightweight.
-    from llada.plus.train.runner import train as _train
+    from mdm.engines.llada_plus.runner import train as _train
 
     train_cfg = _flatten_train_cfg(cfg)
 

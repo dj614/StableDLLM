@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import torch
+from transformers import AutoModel, AutoTokenizer
 
-from ..model.load import load_tokenizer_and_model
-from ..tasks.registry import iter_task_examples
-from ..utils.io import iter_jsonl, write_jsonl
-from ..eval.metrics import score_gsm8k, score_hitab, score_openscience
+from mdm.utils.io import iter_jsonl, write_jsonl
 
 try:
     # The original sampler lives in the top-level `LLaDA/` package in this repo.
@@ -23,12 +23,53 @@ except Exception:  # pragma: no cover
 DEFAULT_MODEL_NAME = "GSAI-ML/LLaDA-8B-Instruct"
 
 
-def _ensure_repo_paths():
-    # placeholder for future path utilities
-    return
+@dataclass
+class _Loaded:
+    tokenizer: Any
+    model: Any
+    device: torch.device
+    device_ids: List[int]
+
+
+def _ensure_repo_paths() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+
+
+def load_tokenizer_and_model(
+    *,
+    model_name: str,
+    checkpoint_path: str,
+    device_ids: List[int],
+) -> _Loaded:
+    _ensure_repo_paths()
+    device_ids = device_ids or [0]
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model_path = checkpoint_path if checkpoint_path else model_name
+    model = AutoModel.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+        torch_dtype=torch.bfloat16,
+    ).eval()
+
+    if torch.cuda.is_available():
+        if len(device_ids) > 1:
+            model = torch.nn.DataParallel(model, device_ids=device_ids)
+            device = torch.device(f"cuda:{device_ids[0]}")
+        else:
+            device = torch.device(f"cuda:{device_ids[0]}")
+        model = model.to(device)
+    else:
+        device = torch.device("cpu")
+        model = model.to(device)
+
+    return _Loaded(tokenizer=tokenizer, model=model, device=device, device_ids=device_ids)
 
 
 def cmd_infer(args: argparse.Namespace) -> None:
+    from LLaDA.llada.tasks.registry import iter_task_examples
+
     loaded = load_tokenizer_and_model(
         model_name=args.model_name,
         checkpoint_path=args.checkpoint_path,
@@ -86,13 +127,15 @@ def cmd_infer(args: argparse.Namespace) -> None:
 
         decoded = tok.batch_decode(out[:, input_ids.shape[1]:], skip_special_tokens=True)
         for pred_text, meta, gold_raw, raw_prompt in zip(decoded, batch_meta, batch_gold, batch_prompts):
-            rows.append({
-                "task": args.task,
-                "prompt": raw_prompt,
-                "gold_raw": gold_raw,
-                "prediction": pred_text,
-                "meta": meta,
-            })
+            rows.append(
+                {
+                    "task": args.task,
+                    "prompt": raw_prompt,
+                    "gold_raw": gold_raw,
+                    "prediction": pred_text,
+                    "meta": meta,
+                }
+            )
 
         batch_prompts, batch_meta, batch_gold = [], [], []
 
@@ -116,6 +159,8 @@ def cmd_infer(args: argparse.Namespace) -> None:
 
 
 def cmd_score(args: argparse.Namespace) -> None:
+    from LLaDA.llada.eval.metrics import score_gsm8k, score_hitab, score_openscience
+
     rows = list(iter_jsonl(args.pred_jsonl))
     task = args.task.lower()
     if task == "gsm8k":
@@ -137,9 +182,8 @@ def cmd_score(args: argparse.Namespace) -> None:
 
 
 def cmd_preprocess(args: argparse.Namespace) -> None:
-    # Minimal placeholder: keep legacy preprocess under tools/ for now.
     raise SystemExit(
-        "preprocess has been moved to tools/preprocess/legacy/ for this repo. "
+        "preprocess has been moved to tools/preprocess/. "
         "If you need a unified preprocessing pipeline, extend llada/cli/main.py."
     )
 
@@ -177,13 +221,14 @@ def build_parser() -> argparse.ArgumentParser:
     ps.add_argument("--out_metrics", type=str, default="")
     ps.set_defaults(func=cmd_score)
 
-    pp = sub.add_parser("preprocess", help="(placeholder) see tools/preprocess/legacy/")
+    pp = sub.add_parser("preprocess", help="(placeholder) see tools/preprocess/")
     pp.set_defaults(func=cmd_preprocess)
 
     return p
 
 
 def main(argv: Optional[List[str]] = None) -> None:
+    _ensure_repo_paths()
     parser = build_parser()
     args = parser.parse_args(argv)
     args.func(args)

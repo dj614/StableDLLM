@@ -20,10 +20,10 @@ from deepspeed.ops.adam import DeepSpeedCPUAdam
 from tqdm.auto import tqdm
 import wandb
 
-from llada.plus.data import LLaDADataset, collate_fn
-from llada.plus.diffusion import MASK_TOKEN_ID, forward_process
-from llada.plus.importance_sampling import evaluate_over_x0, fit_p_of_t
-from llada.plus.losses import batched_loss_for_backpropagate
+from mdm.engines.llada_plus.data import LLaDADataset, collate_fn
+from mdm.engines.llada_plus.diffusion import MASK_TOKEN_ID, forward_process
+from mdm.engines.llada_plus.importance_sampling import evaluate_over_x0, fit_p_of_t
+from mdm.engines.llada_plus.losses import batched_loss_for_backpropagate
 from mdm.utils.seed import set_random_seed
 from mdm.utils.output_dir import make_output_dir_and_broadcast
 
@@ -59,7 +59,7 @@ def train(args):
     train_ds, eval_ds = torch.utils.data.random_split(ds, [train_n, eval_n], generator=g_data)
     do_evaluation = eval_n != 0
     if not do_evaluation:
-        accelerator.print("⚠️ args.train_ratio == 1.0；跳过 eval")
+        accelerator.print("args.train_ratio == 1.0; skipping eval")
 
     train_loader = DataLoader(
         train_ds,
@@ -105,10 +105,10 @@ def train(args):
     if accelerator.is_main_process:
         wandb.init(project=f"llada_{args.task}", config=vars(args))
     accelerator.print(
-        f"◎ 全局 batch = {args.batch_size_per_gpu} × grad_accum {args.grad_accum} × "
+        f"global batch = {args.batch_size_per_gpu} x grad_accum {args.grad_accum} x "
         f"processes {accelerator.num_processes} = {gb}"
     )
-    accelerator.print(f"★ 总数据量 训练 {train_n}，评估 {eval_n}，步骤 {total_steps}")
+    accelerator.print(f"data counts: train {train_n}, eval {eval_n}, steps {total_steps}")
 
     # output dir
     output_dir = make_output_dir_and_broadcast(args, accelerator)

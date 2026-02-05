@@ -6,8 +6,8 @@ At this stage we keep configuration semantics minimal (YAML + deep merge +
 dotted-key overrides) and dispatch to a training engine selected by config.
 
 Currently supported engines:
-- ``llada_plus``: reuse the existing masked-language diffusion runner under
-  ``src/llada/plus``.
+- ``llada_plus``: masked-language diffusion runner under
+  ``src/mdm/engines/llada_plus``.
 
 Usage examples:
 

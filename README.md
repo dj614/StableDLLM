@@ -313,9 +313,11 @@ The LLaDA/ subtree is vendored from the upstream [**LLaDA**](https://github.com/
 
 If you find this work useful, please kindly cite:
 
+```bash
 @misc{jia2025bringstabilitytodiffusion,
   title        = {Bringing Stability to Diffusion: Decomposing and Reducing Variance of Training Masked Diffusion Models},
   author       = {Mengni Jia, Mengyu Zhou, Yihao Liu, Xiaoxi Jiang, Guanjun Jiang},
   year         = {2025},
   note         = {arXiv preprint arXiv:2511.18159}
 }
+```

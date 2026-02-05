@@ -73,9 +73,10 @@ pip install pyyaml
 ```
 
 ## 🎯 Quickstart
-### 1) Preprocess a training dataset (example: GSM8K)
 
-Training uses a processed JSONL format (see Data format). The repo provides preprocessors under src/tools/preprocess/train/.
+### 1) Data preprocessing / preparation (example: GSM8K)
+
+Training uses a processed JSONL format (see **Data format** below). The repo provides preprocessors under `src/tools/preprocess/train/`.
 
 Example for GSM8K:
 
@@ -84,21 +85,83 @@ PYTHONPATH=src:. python src/tools/preprocess/train/preprocess_gsm8k_to_llada.py 
   --out_file ./data/train/gsm8k.jsonl
 ```
 
-### 2) Train with the unified mdm entrypoint
+#### Data format
 
-The training CLI supports multiple YAML files (base + overlays). A typical run uses:
+**Training (processed JSONL)**
 
-base: src/configs/mdm/base/train_llada_plus.yaml
+The LLaDA+ training engine (`mdm.engines.llada_plus`) reads a JSONL where each line is a dict:
 
-overlay: LLaDA/configs/llada_gsm8k.yaml (task-specific settings)
-
-```bash
-PYTHONPATH=src:. python -m mdm.train \
-  --config src/configs/mdm/base/train_llada_plus.yaml \
-  --config LLaDA/configs/llada_gsm8k.yaml \
-  --auto_import LLaDA.llada.register \
-  --set train.output_dir=./outputs/llada_plus_gsm8k
+```json
+{"input_ids": [ ... token ids ... ], "prompt_length": 123}
 ```
+
+- `input_ids`: tokenized full sequence (prompt + answer)
+- `prompt_length`: prefix length (tokens) that belong to the prompt. Loss is applied only to tokens after this boundary.
+
+The training dataloader will:
+- pad sequences in-batch,
+- set `labels = input_ids` but mask out:
+  - padding,
+  - prompt tokens (`labels[:prompt_length] = -100`).
+
+This format is produced by preprocess scripts under `src/tools/preprocess/train/`.
+
+---
+
+### 2) Register a task (adding a new task)
+
+Tasks are registered via `mdm.registry` with a `TaskSpec`.
+
+- Interface: `src/mdm/tasks/spec.py`
+- Registry: `src/mdm/registry.py`
+
+Minimal pattern:
+
+```python
+from mdm.registry import register_task
+from mdm.tasks.spec import BaseTaskSpec
+
+class MyTask(BaseTaskSpec):
+    name = "my_task"
+
+    def build_dataset(self, split, cfg): ...
+    def collate_fn(self, batch): ...
+    def postprocess(self, pred, cfg): ...
+    def metrics(self, pred_path, gt_path, cfg): ...
+
+register_task("my_task", MyTask())
+```
+
+Then evaluate with `mdm.eval.harness --task my_task` (see **Evaluation** below).
+
+---
+
+### 3) Configuration
+
+The unified entrypoint (`python -m mdm.train`) merges YAML configs and then dispatches to a training engine.
+
+#### Engine: `llada_plus`
+
+Config keys live under `train.*` (see `src/mdm/train/main.py` and `src/mdm/engines/llada_plus/cli/train.py`).
+
+Common knobs:
+
+- **Data**
+  - `train.train_data_path`: processed JSONL path (defaults to `./data/train/{task}.jsonl`)
+  - `train.max_len`: max token length
+  - `train.epochs`, `train.train_ratio`
+- **Optimization**
+  - `train.lr`, `train.lr_scheduler_type`, `train.warmup_steps`
+  - `train.batch_size_per_gpu`, `train.grad_accum`
+- **Eval / checkpoints**
+  - `train.eval_strategy`: `epoch` or `steps`
+  - `train.save_strategy`: `last`, `epoch`, or `steps`
+  - `train.output_dir`: log/ckpt directory (default: `./logs/{task}`)
+- **Diffusion / sampling**
+  - `train.train_mode`: `Normal` or `MIRROR`
+  - `train.PPOTS`: enable IS-on-t training logic
+  - `train.p_model`: importance sampling model (`EPR`, `AP`, ...)
+  - plus various IS-related sampling counts and caps
 
 To inspect the final merged config without training:
 
@@ -109,37 +172,36 @@ PYTHONPATH=src:. python -m mdm.train \
   --dump_config
 ```
 
-### 3) Run inference + score (legacy llada CLI)
+---
 
-A small convenience CLI lives at src/llada/cli/main.py:
+### 4) Train (including multi-GPU / multi-node)
 
-```bash
-PYTHONPATH=src:. python -m llada.cli.main infer \
-  --task gsm8k \
-  --out_file ./outputs/preds_gsm8k.jsonl \
-  --model_name GSAI-ML/LLaDA-8B-Instruct \
-  --steps 128 --gen_length 128
-```
+#### Train with the unified MDM entrypoint
 
-Then score:
+The training CLI supports multiple YAML files (base + overlays). A typical run uses:
+
+- base: `src/configs/mdm/base/train_llada_plus.yaml`
+- overlay: `LLaDA/configs/llada_gsm8k.yaml` (task-specific settings)
 
 ```bash
-PYTHONPATH=src:. python -m llada.cli.main score \
-  --task gsm8k \
-  --pred_jsonl ./outputs/preds_gsm8k.jsonl
+PYTHONPATH=src:. python -m mdm.train \
+  --config src/configs/mdm/base/train_llada_plus.yaml \
+  --config LLaDA/configs/llada_gsm8k.yaml \
+  --auto_import LLaDA.llada.register \
+  --set train.output_dir=./outputs/llada_plus_gsm8k
 ```
 
-## Multi-GPU training (Accelerate / DeepSpeed)
+#### Multi-GPU training (Accelerate / DeepSpeed)
 
-The LLaDA+ runner is built on 🤗 Accelerate. For multi-GPU training, use accelerate launch.
+The LLaDA+ runner is built on 🤗 Accelerate. For multi-GPU training, use `accelerate launch`.
 
 Example Accelerate config:
 
-src/configs/accelerate/deepspeed_zero2.yaml
+- `src/configs/accelerate/deepspeed_zero2.yaml`
 
-Note: the deepspeed_config_file path in that file may need to point to:
+Note: the `deepspeed_config_file` path in that file may need to point to:
 
-src/configs/deepspeed/zero2_cpu_offload.json
+- `src/configs/deepspeed/zero2_cpu_offload.json`
 
 Example launch:
 
@@ -152,57 +214,28 @@ accelerate launch --config_file src/configs/accelerate/deepspeed_zero2.yaml \
   --set train.output_dir=./outputs/llada_plus_gsm8k_ds
 ```
 
-## ⚙️ Configuration
+#### Multi-node training (Accelerate)
 
-The unified entrypoint (python -m mdm.train) merges YAML configs and then dispatches to a training engine.
+For multi-node, use an Accelerate config that sets (at least) `num_machines`, `machine_rank`, `main_process_ip`, and `main_process_port`.
+Then run the same `accelerate launch` command on each node with its corresponding rank/config.
 
-### Engine: llada_plus
+---
 
-Config keys live under train.* (see src/mdm/train/main.py and src/mdm/engines/llada_plus/cli/train.py).
+### 5) Inference (legacy `llada` CLI)
 
-Common knobs:
+A small convenience CLI lives at `src/llada/cli/main.py`:
 
-- Data
-  - train.train_data_path: processed JSONL path (defaults to ./data/train/{task}.jsonl)
-  - train.max_len: max token length
-  - train.epochs, train.train_ratio
-- Optimization
-  - train.lr, train.lr_scheduler_type, train.warmup_steps
-  - train.batch_size_per_gpu, train.grad_accum
-- Eval / checkpoints
-  - train.eval_strategy: epoch or steps
-  - train.save_strategy: last, epoch, or steps
-  - train.output_dir: log/ckpt directory (default: ./logs/{task})
-- Diffusion / sampling
-  - train.train_mode: Normal or MIRROR
-  - train.PPOTS: enable IS-on-t training logic
-  - train.p_model: importance sampling model (EPR, AP, ...)
-  - plus various IS-related sampling counts and caps
-
-## Data format
-
-### Training (processed JSONL)
-
-The LLaDA+ training engine (mdm.engines.llada_plus) reads a JSONL where each line is a dict:
-
-```json
-{"input_ids": [ ... token ids ... ], "prompt_length": 123}
+```bash
+PYTHONPATH=src:. python -m llada.cli.main infer \
+  --task gsm8k \
+  --out_file ./outputs/preds_gsm8k.jsonl \
+  --model_name GSAI-ML/LLaDA-8B-Instruct \
+  --steps 128 --gen_length 128
 ```
 
-- input_ids: tokenized full sequence (prompt + answer)
-- prompt_length: prefix length (tokens) that belong to the prompt. Loss is applied only to tokens after this boundary.
+#### Inference / scoring JSONL
 
-The training dataloader will:
-- pad sequences in-batch,
-- set labels = input_ids but mask out:
-  - padding,
-  - prompt tokens (labels[:prompt_length] = -100).
-
-This format is produced by preprocess scripts under src/tools/preprocess/train/.
-
-### Inference / scoring JSONL
-
-The legacy llada infer command writes one dict per sample, e.g.:
+The legacy `llada infer` command writes one dict per sample, e.g.:
 
 ```json
 {
@@ -214,9 +247,21 @@ The legacy llada infer command writes one dict per sample, e.g.:
 }
 ```
 
-The scoring helpers (llada score) use robust answer extraction heuristics in LLaDA/llada/eval/.
+The scoring helpers (`llada score`) use robust answer extraction heuristics in `LLaDA/llada/eval/`.
 
-## Evaluation harness (mdm.eval)
+---
+
+### 6) Evaluation
+
+#### Score predictions (legacy `llada` CLI)
+
+```bash
+PYTHONPATH=src:. python -m llada.cli.main score \
+  --task gsm8k \
+  --pred_jsonl ./outputs/preds_gsm8k.jsonl
+```
+
+#### Evaluation harness (`mdm.eval`)
 
 For framework-level evaluation (task-pack driven), use:
 
@@ -237,34 +282,7 @@ PYTHONPATH=src:. python -m mdm.eval.harness \
   --auto_import LLaDA.llada.register
 ```
 
-The task pack (LLaDA/llada/tasks/specs.py) will merge pred and gt by id (preferred) or index.
-
-## Adding a new task
-
-Tasks are registered via mdm.registry with a TaskSpec:
-
-Interface: src/mdm/tasks/spec.py
-
-Registry: src/mdm/registry.py
-
-Minimal pattern:
-
-```python
-from mdm.registry import register_task
-from mdm.tasks.spec import BaseTaskSpec
-
-class MyTask(BaseTaskSpec):
-    name = "my_task"
-
-    def build_dataset(self, split, cfg): ...
-    def collate_fn(self, batch): ...
-    def postprocess(self, pred, cfg): ...
-    def metrics(self, pred_path, gt_path, cfg): ...
-
-register_task("my_task", MyTask())
-```
-
-Then evaluate with mdm.eval.harness --task my_task.
+The task pack (`LLaDA/llada/tasks/specs.py`) will merge pred and gt by id (preferred) or index.
 
 ## Development & tests
 

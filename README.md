@@ -307,11 +307,7 @@ pytest -q
 
 ## 🙏🏻 Acknowledgements & license
 
-The LLaDA/ subtree is vendored from the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) repository.
-
-The framework and glue code in src/mdm are intended to be small and easy to adapt for your own diffusion-LM experiments.
-
-If you publish results based on this repo, please also cite/credit the upstream LLaDA project.
+The LLaDA/ subtree is vendored from the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) repository. The framework and glue code in src/mdm are intended to be small and easy to adapt for your own diffusion-LM experiments. We thank the original authors for their open-source contributions.
 
 ## ⭐️ Citation
 

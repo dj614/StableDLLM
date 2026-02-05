@@ -1,4 +1,4 @@
-# BRINGING STABILITY TO DIFFUSION: DECOMPOSING AND REDUCING VARIANCE OF TRAINING MASKED DIFFUSION MODELS
+# Bringing Stability to Diffusion: Decomposing and Reducing Variance of Training Masked Diffusion Models
 
 **StableDLLM** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
 

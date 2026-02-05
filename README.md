@@ -21,7 +21,7 @@ It provides a lightweight “framework layer” for configuration, training, and
 
 ## 💡 Main Results
 
-Compared to standard MDM training, our methods boost accuracy by 7–8% on complex reasoning tasks while reducing run-to-run variability to near ARM levels. This substantially narrows the gap to strong ARM baselines; in most settings, even the best baseline runs still fall below the worst run of our method.
+Compared to standard MDM training, our methods boost accuracy by **7–8%** on complex reasoning tasks while reducing run-to-run variability to **near ARM levels**. This substantially narrows the gap to strong ARM baselines; in most settings, even the best baseline runs still fall below the worst run of our method.
 
 <p align="center">
   <a href="assets/table1.png">

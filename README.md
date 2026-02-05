@@ -1,15 +1,10 @@
 # Diffusion+ (MDM): Masked-Diffusion Training & LLaDA Utilities
 
-**Diffusion+ (MDM)** is a small, opinionated scaffold for **masked-language diffusion** experiments, centered around the **LLaDA** family of diffusion language models.
+**Diffusion+ (MDM)** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
 
 It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream **LLaDA** code vendored and mostly intact.
 
-> **Links (fill as needed)**  
-> - Project page: **[TBD]**  
-> - Paper: **[TBD]** (arXiv: **TBD**)  
-> - License: see **[Acknowledgements & license](#acknowledgements--license)**
 
----
 <p align="center">
   <a href="assets/paper.pdf">
     <img src="assets/paper_p5.png" width="800" />
@@ -36,10 +31,10 @@ This repo contains two main pieces:
 
 ## 🔥 News
 
-- **[YYYY.MM.DD]** TBD — initial public release.
-- **[YYYY.MM.DD]** TBD — paper/code update.
+- **[2026.02.09]** We released our code.
+- **[2026.01.26]** Our paper is accepted by ICLR 2026 conference.
+- **[2025.11.22]** We released our paper on arxiv: 
 
-(Replace with your real milestones.)
 
 ---
 
@@ -362,10 +357,9 @@ If you publish results based on this repo, please also cite/credit the upstream 
 
 If you find this work useful, please kindly cite:
 
-@misc{mdm_diffusion_plus_TBD,
-  title        = {Diffusion+ (MDM): Masked-Diffusion Training \& LLaDA Utilities},
-  author       = {TBD},
-  year         = {TBD},
-  howpublished = {\url{TBD}},
-  note         = {arXiv:TBD}
+@misc{jia2025bringstabilitytodiffusion,
+  title        = {Bringing Stability to Diffusion: Decomposing and Reducing Variance of Training Masked Diffusion Models},
+  author       = {Mengni Jia, Mengyu Zhou, Yihao Liu, Xiaoxi Jiang, Guanjun Jiang},
+  year         = {2025},
+  note         = {arXiv preprint arXiv:2511.18159}
 }

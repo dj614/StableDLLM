@@ -305,46 +305,9 @@ Run unit tests:
 pytest -q
 ```
 
-## Troubleshooting
-### ModuleNotFoundError: mdm / llada
-
-Make sure PYTHONPATH includes both src and repo root:
-
-```bash
-export PYTHONPATH="$(pwd)/src:$(pwd)"
-```
-
-### Hugging Face download/auth errors
-
-Run:
-
-```bash
-huggingface-cli login
-```
-
-Ensure you have access to the model repo if it is gated/private.
-
-### DeepSpeed config path mismatch
-
-If accelerate launch fails due to a missing DeepSpeed JSON, update the Accelerate config to point to:
-
-src/configs/deepspeed/zero2_cpu_offload.json
-
-### Out-of-memory
-
-Common mitigations:
-
-reduce train.max_len
-
-reduce train.batch_size_per_gpu
-
-increase train.grad_accum
-
-enable DeepSpeed ZeRO2/ZeRO3 via accelerate launch
-
 ## 🙏🏻 Acknowledgements & license
 
-The LLaDA/ subtree is vendored from the upstream LLaDA repository and includes its own license file (LLaDA/LICENSE, MIT).
+The LLaDA/ subtree is vendored from the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) repository.
 
 The framework and glue code in src/mdm are intended to be small and easy to adapt for your own diffusion-LM experiments.
 

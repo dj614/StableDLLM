@@ -1,6 +1,6 @@
-# Diffusion+ (MDM): Masked-Diffusion Training & LLaDA Utilities
+# BRINGING STABILITY TO DIFFUSION: DECOMPOSING AND REDUCING VARIANCE OF TRAINING MASKED DIFFUSION MODELS
 
-**Diffusion+ (MDM)** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
+**StableDLLM** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
 
 It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) code vendored and mostly intact.
 
@@ -50,10 +50,6 @@ This repo contains two main pieces:
 
 - **framework plumbing** (config/registry/eval harness) in `src/mdm/`
 - **task packs** (datasets/metrics/adapters) in `LLaDA/llada/`
-
----
-
-## Repository layout
 
 ```
 .

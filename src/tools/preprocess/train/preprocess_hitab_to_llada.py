@@ -2,7 +2,7 @@
 # coding: utf-8
 """HiTab JSONL ➜ LLaDA SFT 所需格式。
 
-输入:  每行 {"prompt": "...", "response": "..."}
+输入:  每行 {"prompt": "...", "response": "..."}（CoT 数据需要自行构造；官方 HiTab 数据仅有 prompt 与 ground-truths，无 CoT responses）
 输出:  JSONL （键: input_ids, prompt_length）
 
 用法:
@@ -32,7 +32,7 @@ from mdm.utils.sft_format import encode_sft_pair
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--in_file",  type=str, default="./LLaDA/hitab_reasoning_sft_str.jsonl")
+    ap.add_argument("--in_file",  type=str, default="./LLaDA/hitab_reasoning_sft_str.jsonl", help="包含 CoT responses 的数据集")
     ap.add_argument("--out_file", type=str, default="./LLaDA/data/train/hitab_reasoning_sft_str_processed.jsonl")
     ap.add_argument("--model_path", default="GSAI-ML/LLaDA-8B-Instruct")
     ap.add_argument("--china", action="store_true", help="是否使用国内镜像 hf-mirror.com")

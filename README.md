@@ -200,7 +200,7 @@ Common knobs:
   - train.p_model: importance sampling model (EPR, AP, ...)
   - plus various IS-related sampling counts and caps
 
-## ## Data format
+## Data format
 
 ### Training (processed JSONL)
 

@@ -2,7 +2,7 @@
 
 **Diffusion+ (MDM)** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
 
-It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream **LLaDA** code vendored and mostly intact.
+It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) code vendored and mostly intact.
 
 
 <p align="center">
@@ -10,6 +10,30 @@ It provides a lightweight “framework layer” for configuration, training, and
     <img src="assets/paper_p5.png" width="800" />
   </a>
 </p>
+
+## 🔥 News
+
+- **[2026.02.09]** We released the codebase.
+- **[2026.01.26]** Our paper was accepted to ICLR 2026.
+- **[2025.11.22]** We posted our paper on [arXiv:2511.18159](https://arxiv.org/abs/2511.18159)
+
+---
+
+## 💡 Main Results
+
+<p align="center">
+  <a href="assets/table1.png">
+    <img src="assets/table1.png" width="800" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="assets/table2.pdf">
+    <img src="assets/table2.png" width="800" />
+  </a>
+</p>
+
+---
 
 ## MDM Framework
 
@@ -26,15 +50,6 @@ This repo contains two main pieces:
 
 - **framework plumbing** (config/registry/eval harness) in `src/mdm/`
 - **task packs** (datasets/metrics/adapters) in `LLaDA/llada/`
-
----
-
-## 🔥 News
-
-- **[2026.02.09]** We released the codebase.
-- **[2026.01.26]** Our paper was accepted to ICLR 2026.
-- **[2025.11.22]** We posted our paper on arxiv: [arXiv:2511.18159](https://arxiv.org/abs/2511.18159)
-
 
 ---
 

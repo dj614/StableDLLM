@@ -49,36 +49,6 @@ Compared to standard MDM training, our methods boost accuracy by **7–8%** on c
 
 ---
 
-## MDM Framework
-
-This repo contains two main pieces:
-
-- **`src/mdm/`**: framework + engine(s)
-  - a unified training entrypoint (`python -m mdm.train`) with YAML deep-merge + overrides
-  - a task registry + evaluation harness (`python -m mdm.eval.harness`)
-  - an engine implementation for **LLaDA+** training (`mdm.engines.llada_plus`)
-- **`LLaDA/`**: vendored upstream LLaDA repo (tasks, metrics, original sampler, configs, etc.)  
-  See `LLaDA/README.md` for upstream-specific notes.
-
-**Why this exists:** evaluation and training scripts for diffusion LMs often hard-code dataset fields and ad-hoc conventions. This repo separates:
-
-- **framework plumbing** (config/registry/eval harness) in `src/mdm/`
-- **task packs** (datasets/metrics/adapters) in `LLaDA/llada/`
-
-```
-.
-├── LLaDA/ # upstream code (sampler, tasks, original configs)
-├── src/
-│ ├── mdm/ # framework layer + llada_plus training engine
-│ ├── llada/ # small legacy CLI wrapper (infer/score)
-│ ├── configs/ # MDM + accelerate/deepspeed configs
-│ └── tools/ # data preprocessing + eval helpers
-├── scripts/ # refactor / smoke scripts
-└── tests/ # lightweight unit tests
-```
-
----
-
 ## 🛠️ Installation
 
 ### Requirements

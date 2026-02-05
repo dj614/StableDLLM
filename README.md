@@ -214,11 +214,6 @@ accelerate launch --config_file src/configs/accelerate/deepspeed_zero2.yaml \
   --set train.output_dir=./outputs/llada_plus_gsm8k_ds
 ```
 
-#### Multi-node training (Accelerate)
-
-For multi-node, use an Accelerate config that sets (at least) `num_machines`, `machine_rank`, `main_process_ip`, and `main_process_port`.
-Then run the same `accelerate launch` command on each node with its corresponding rank/config.
-
 ---
 
 ### 5) Inference (legacy `llada` CLI)

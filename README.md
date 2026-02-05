@@ -21,6 +21,8 @@ It provides a lightweight “framework layer” for configuration, training, and
 
 ## 💡 Main Results
 
+Compared to standard MDM training, our methods boost accuracy by 7–8% on complex reasoning tasks while reducing run-to-run variability to near ARM levels. This substantially narrows the gap to strong ARM baselines; in most settings, even the best baseline runs still fall below the worst run of our method.
+
 <p align="center">
   <a href="assets/table1.png">
     <img src="assets/table1.png" width="800" />
@@ -86,21 +88,6 @@ source .venv/bin/activate
 pip install -U pip
 pip install -r LLaDA/requirements.txt
 pip install pyyaml
-```
-
-This repo is not packaged on PyPI; use PYTHONPATH so Python can import from src/:
-
-```bash
-export PYTHONPATH="$(pwd)/src:$(pwd)"
-```
-# Windows (PowerShell):
-# $env:PYTHONPATH = "$(Get-Location)\src;$(Get-Location)"
-```
-
-If you pull models/datasets from Hugging Face:
-
-```bash
-huggingface-cli login
 ```
 
 ## 🎯 Quickstart

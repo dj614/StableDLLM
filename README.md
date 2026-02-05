@@ -10,8 +10,13 @@ It provides a lightweight “framework layer” for configuration, training, and
 > - License: see **[Acknowledgements & license](#acknowledgements--license)**
 
 ---
+<p align="center">
+  <a href="assets/paper.pdf">
+    <img src="assets/paper_p5.png" width="800" />
+  </a>
+</p>
 
-## MDM Framework (at a glance)
+## MDM Framework
 
 This repo contains two main pieces:
 

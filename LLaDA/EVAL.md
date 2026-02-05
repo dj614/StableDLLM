@@ -3,11 +3,10 @@
 ## Usage
 Please refer to `eval_llada.sh` for the required dependencies and execution commands.
 
-For LLaDA-Base, we provide a comparison of the five conditional generation metrics evaluated using both the open-source `lm-eval` library and our internal evaluation toolkit.
+For LLaDA-Base, below is an example snapshot of conditional generation metrics evaluated with `lm-eval`:
 
 ||BBH|GSM8K|Math|HumanEval|MBPP|
 |-|-|-|-|-|-|
-|Internal toolkit|49.8|70.7|27.3|33.5|38.4|
 |`lm-eval`|49.7|70.3|31.4|35.4|40.0|
 
 In addition, we provide ablation studies on the above five metrics with respect to different generation lengths using `lm-eval`.
@@ -18,20 +17,18 @@ In addition, we provide ablation studies on the above five metrics with respect 
 |gen_length=256,steps=256,block_length=256|45.0|70.0|30.3|32.9|40.2|
 
 
-## Challenges encountered when reproducing the Instruct model with `lm-eval`
-To ensure that we was using `lm-eval` correctly, we first tested it on **LLaMA3-8B-Instruct**. The results are as follows:
+## Notes on evaluating chat/instruct models with `lm-eval`
 
-||MMLU|MMLU Pro|ARC-C|GSM8K|Math|GPQA|HumanEval|MBPP|
-|-|-|-|-|-|-|-|-|-|
-|[Reported](https://arxiv.org/pdf/2407.10671)|68.4|41.0|-|79.6|30.0|34.2|62.2|67.9|
-|Internal toolkit|68.4|41.9|82.4|78.3|29.6|33.5|59.8|57.6|
-|`lm-eval`|66.5|19.6|82.1|67.3|27.3|33.5|36.6|57.0|
+Evaluation results for chat/instruct models can vary depending on chat templates, few-shot formatting, and task implementations.
+If your numbers differ substantially, double-check:
 
-We found that for benchmarks such as MMLU-Pro, GSM8K, and HumanEval, the results obtained using `lm-eval` are significantly lower than expected. Once we resolve the issues affecting the evaluation of LLaMA3-8B-Instruct, we will release the evaluation code for LLaDA-Instruct.
+- `transformers` / `accelerate` versions
+- whether `--apply_chat_template` and `--fewshot_as_multiturn` match the task’s expected format
+- whether code-evaluation tasks require `--confirm_run_unsafe_code`
 
-If you have any suggestions or feedback on this BUG, please feel free to contact us via email at nieshen@ruc.edu.cn or reach out via WhatsApp/WeChat at (+86) 18809295303. We would greatly appreciate it.
+The commands below provide a concrete reference setup for sanity-checking `lm-eval` on a chat model.
 
-Below is the command we used to test LLaMA3-8B-Instruct:
+Below is an example command sequence we used to test Meta-Llama-3-8B-Instruct:
 ```
 pip install transformers==4.49.0 accelerate==0.34.2
 pip install antlr4-python3-runtime==4.11 math_verify sympy hf_xet

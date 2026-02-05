@@ -66,6 +66,10 @@ def generate(model, prompt, tokenizer, steps=128, gen_length=128, block_length=1
 
     print_i = 0
 
+    trace_f = None
+    if trace_path:
+        trace_f = open(trace_path, "a", encoding="utf-8")
+
     for num_block in range(num_blocks):
         block_mask_index = (x[:, prompt.shape[1] + num_block * block_length: prompt.shape[1] + (num_block + 1) * block_length:] == mask_id)
         num_transfer_tokens = get_num_transfer_tokens(block_mask_index, steps)
@@ -81,11 +85,15 @@ def generate(model, prompt, tokenizer, steps=128, gen_length=128, block_length=1
             else:
                 logits = model(x).logits
 
+            logits = logits.to(torch.float64)
+            if 0 <= mask_id < logits.shape[-1]:
+                logits[..., mask_id] = -float("inf")
+
             logits_with_noise = add_gumbel_noise(logits, temperature=temperature)
             x0 = torch.argmax(logits_with_noise, dim=-1) # b, l
 
             if remasking == 'low_confidence':
-                p = F.softmax(logits.to(torch.float64), dim=-1)
+                p = F.softmax(logits, dim=-1)
                 x0_p = torch.squeeze(
                     torch.gather(p, dim=-1, index=torch.unsqueeze(x0, -1)), -1) # b, l
             elif remasking == 'random':
@@ -111,14 +119,18 @@ def generate(model, prompt, tokenizer, steps=128, gen_length=128, block_length=1
             for token_id in generated_token_ids:
                 # Decode single token and handle newlines
                 decoded_token = tokenizer.decode(token_id).replace("\n", " ").replace("<|eot_id|>", " ").replace("<|endoftext|>", " ")
-                
+
                 # Add asterisk wrapping (preserve original space positions)
                 formatted_token = f"*{decoded_token}&"
                 formatted_output.append(formatted_token)
             # Combine final output
             final_output = "".join(formatted_output).strip()
-            print(f"{print_i}, {final_output}", file=open("sample_process.txt", "a"))
+            if trace_f is not None:
+                print(f"{print_i}, {final_output}", file=trace_f, flush=True)
 
+
+    if trace_f is not None:
+        trace_f.close()
     return x
 
 
@@ -137,7 +149,7 @@ def main():
     input_ids = tokenizer(prompt)['input_ids']
     input_ids = torch.tensor(input_ids).to(device).unsqueeze(0)
 
-    out = generate(model, input_ids, tokenizer, steps=64, gen_length=64, block_length=64, temperature=0., cfg_scale=0., remasking='random')
+    out = generate(model, input_ids, tokenizer, steps=64, gen_length=64, block_length=64, temperature=0., cfg_scale=0., remasking='random', trace_path="sample_process.txt")
 
 
 if __name__ == '__main__':

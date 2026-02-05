@@ -6,37 +6,47 @@ from transformers import AutoTokenizer, AutoModel
 
 def add_gumbel_noise(logits, temperature):
     '''
-    The Gumbel max is a method for sampling categorical distributions.
-    According to arXiv:2409.02908, for MDM, low-precision Gumbel Max improves perplexity score but reduces generation quality.
-    Thus, we use float64.
+    Gumbel-max sampling helper.
+
+    Returns a perturbed score tensor suitable for `argmax` sampling:
+        argmax(logits / temperature + gumbel)
+
+    Notes:
+      - temperature <= 0 disables sampling noise (deterministic argmax).
+      - we use float64 to reduce numerical issues (as suggested in arXiv:2409.02908).
     '''
-    if temperature == 0:
+    if temperature <= 0:
         return logits
     logits = logits.to(torch.float64)
-    noise = torch.rand_like(logits, dtype=torch.float64)
-    gumbel_noise = (- torch.log(noise)) ** temperature
-    return logits.exp() / gumbel_noise
+
+    # Sample standard Gumbel noise: g = -log(-log(u))
+    u = torch.rand_like(logits, dtype=torch.float64).clamp_(1e-12, 1.0 - 1e-12)
+    g = -torch.log(-torch.log(u))
+    return logits / float(temperature) + g
 
 
 def get_num_transfer_tokens(mask_index, steps):
     '''
-    In the reverse process, the interval [0, 1] is uniformly discretized into steps intervals.
-    Furthermore, because LLaDA employs a linear noise schedule (as defined in Eq. (8)),
-    the expected number of tokens transitioned at each step should be consistent.
+    In the reverse process, the interval [0, 1] is uniformly discretized into `steps` intervals.
+    Because LLaDA employs a linear noise schedule (Eq. (8)), the expected number of tokens
+    transitioned at each step should be consistent.
 
-    This function is designed to precompute the number of tokens that need to be transitioned at each step.
+    This function precomputes how many masked tokens are transitioned at each step, per sample.
     '''
-    mask_num = mask_index.sum(dim=1, keepdim=True)
+    if steps <= 0:
+        raise ValueError("steps must be positive")
 
+    # mask_index: [B, L_block] (bool)
+    mask_num = mask_index.sum(dim=1)  # [B]
     base = mask_num // steps
     remainder = mask_num % steps
 
-    num_transfer_tokens = torch.zeros(mask_num.size(0), steps, device=mask_index.device, dtype=torch.int64) + base
-
-    for i in range(mask_num.size(0)):
-        num_transfer_tokens[i, :remainder[i]] += 1
-
-    return num_transfer_tokens
+    B = mask_num.size(0)
+    out = base[:, None].expand(B, steps).clone()
+    if (remainder > 0).any():
+        t = torch.arange(steps, device=mask_index.device)[None, :]
+        out += (t < remainder[:, None]).to(out.dtype)
+    return out.to(torch.int64)
 
 
 @ torch.no_grad()
@@ -54,9 +64,9 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
         remasking: Remasking strategy. 'low_confidence' or 'random'.
         mask_id: The toke id of [MASK] is 126336.
     '''
-    if attention_mask is not None and 0.0 in attention_mask:
-        attention_bias = (attention_mask[:, :, None] & attention_mask[:, None, :]).bool().unsqueeze(1)
-        print(f"attention_bias: {attention_bias}")
+    if attention_mask is not None and (attention_mask == 0).any():
+        am = attention_mask.to(torch.bool)
+        attention_bias = (am[:, :, None] & am[:, None, :]).unsqueeze(1)
     else:
         attention_bias = None
     batch_size = prompt.shape[0]
@@ -87,11 +97,14 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
             else:
                 logits = model(x, attention_bias=attention_bias).logits
 
+            logits = logits.to(torch.float64)
+            if 0 <= mask_id < logits.shape[-1]:
+                logits[..., mask_id] = -float("inf")
             logits_with_noise = add_gumbel_noise(logits, temperature=temperature)
             x0 = torch.argmax(logits_with_noise, dim=-1) # b, l
 
             if remasking == 'low_confidence':
-                p = F.softmax(logits.to(torch.float64), dim=-1)
+                p = F.softmax(logits, dim=-1)
                 x0_p = torch.squeeze(
                     torch.gather(p, dim=-1, index=torch.unsqueeze(x0, -1)), -1) # b, l
             elif remasking == 'random':
@@ -103,12 +116,11 @@ def generate(model, prompt, steps=128, gen_length=128, block_length=128, tempera
 
             x0 = torch.where(mask_index, x0, x)
             confidence = torch.where(mask_index, x0_p, -np.inf)
-            # print(confidence.shape)
             transfer_index = torch.zeros_like(x0, dtype=torch.bool, device=x0.device)
             for j in range(confidence.shape[0]):
                 _, select_index = torch.topk(confidence[j], k=num_transfer_tokens[j, i])
                 transfer_index[j, select_index] = True
-            
+
             if return_logprobs:
                 # compute per‐step log‐prob for masked tokens under `model` (old policy)
                 lp = F.log_softmax(logits, dim=-1)

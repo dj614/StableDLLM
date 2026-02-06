@@ -81,15 +81,16 @@ Training uses a processed JSONL format (see **Data format** below). The repo pro
 Example for GSM8K:
 
 ```bash
-PYTHONPATH=src:. python src/tools/preprocess/train/preprocess_gsm8k_to_llada.py \
-  --out_file ./data/train/gsm8k.jsonl
+PYTHONPATH=src:. python src/tools/preprocess/train/preprocess_gsm8k_sft.py \
+  --out_file ./data/train/gsm8k.jsonl \
+  --tokenizer_path <YOUR_TOKENIZER>
 ```
 
 #### Data format
 
 **Training (processed JSONL)**
 
-The LLaDA+ training engine (`mdm.engines.llada_plus`) reads a JSONL where each line is a dict:
+The training engine (`mdm.engines.llada_plus`) reads a JSONL where each line is a dict:
 
 ```json
 {"input_ids": [ ... token ids ... ], "prompt_length": 123}

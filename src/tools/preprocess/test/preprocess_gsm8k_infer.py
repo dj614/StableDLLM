@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""
-GSM8K (main, test) ➜ 推理数据（与 MATH 脚本同风格：规范化、去重、稳健提取）
-输出 JSONL 键：
-  - data_source: "GSM8K"
-  - prompt: str         (question)
-  - groundtruth: list[str]  （从 answer 中抽取所有 '#### ' 后的最终答案，已规范化与去重）
+"""GSM8K (main, test) ➜ inference / evaluation JSONL (model-agnostic).
 
-用法：
-  python3 preprocess_gsm8k_infer_like_math.py \
-    --out_file /path/gsm8k_infer_main_test.jsonl \
-    --limit 200 \
+Outputs JSONL with keys:
+  - data_source: "GSM8K"
+  - prompt: str
+  - groundtruth: list[str]  (answers extracted from the official '#### ' marker,
+                            normalized and de-duplicated)
+
+This format is used by evaluation scripts that expect prompts + groundtruths
+instead of pre-tokenized input_ids.
+
+Example:
+  PYTHONPATH=src:. python src/tools/preprocess/test/preprocess_gsm8k_infer.py \
+    --out_file ./data/test/gsm8k_main_test.jsonl \
     --normalize_math true
 """
 
@@ -27,25 +30,29 @@ for _p in (str(_SRC_DIR), str(_REPO_ROOT)):
 import argparse
 import json
 import os
+
 from datasets import load_dataset
 from tqdm import tqdm
 
 from mdm.utils.answer_norm import extract_hash4_answers
 
-# ========== 主流程 ==========
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_file", type=str, default="./LLaDA/data/test/gsm8k_test_llada.jsonl", help="输出 JSONL 路径")
-    ap.add_argument("--limit", type=int, default=None, help="仅处理前 N 条，便于试跑")
-    ap.add_argument("--normalize_math", type=str, default="true",
-                    help="是否做数学规范化（true/false），默认 true")
+    ap.add_argument("--out_file", type=str, default="./data/test/gsm8k_main_test.jsonl", help="Output JSONL path")
+    ap.add_argument("--limit", type=int, default=None, help="Only process the first N items (for quick runs)")
+    ap.add_argument(
+        "--normalize_math",
+        type=str,
+        default="true",
+        help="Whether to normalize math answers (true/false). Default: true",
+    )
     args = ap.parse_args()
 
-    normalize_math = str(args.normalize_math).lower() in {"1","true","yes","y"}
+    normalize_math = str(args.normalize_math).lower() in {"1", "true", "yes", "y"}
 
     os.makedirs(os.path.dirname(args.out_file) or ".", exist_ok=True)
 
-    # GSM8K 的主要数据在 config="main", split="test"
     ds = load_dataset("gsm8k", "main", split="test")
 
     kept = 0
@@ -53,6 +60,7 @@ def main():
         for ex in tqdm(ds, desc="convert gsm8k::main/test"):
             if args.limit is not None and kept >= args.limit:
                 break
+
             q = ex.get("question", "") or ""
             a = ex.get("answer", "") or ""
 
@@ -61,12 +69,13 @@ def main():
             item = {
                 "data_source": "GSM8K",
                 "prompt": q,
-                "groundtruth": gts,  # list[str]，按出现顺序，已规范化+去重
+                "groundtruth": gts,
             }
             out_f.write(json.dumps(item, ensure_ascii=False) + "\n")
             kept += 1
 
-    print(f"✓ 完成: 写入 {kept} 条 -> {args.out_file}")
+    print(f"✓ Done: wrote {kept} records -> {args.out_file}")
+
 
 if __name__ == "__main__":
     main()

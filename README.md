@@ -12,9 +12,7 @@
   <i><b> <img src="https://img.alicdn.com/imgextra/i2/O1CN01FPcQDy1WTPjPX6IH9_!!6000000002789-2-tps-96-96.png" width="16px"  style="vertical-align: middle;"> Qwen Large Model Application Team, Alibaba</b></i>
 </p>
 
-**StableDLLM** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes—most notably **P-POTS** (a Pareto-optimal unbiased masking-rate sampler) and **MIRROR** (complementary, negatively correlated masking)—to make diffusion language model training (including the **LLaDA** family) substantially more stable and effective.
-
-It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) code vendored and mostly intact.
+**StableDLLM** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes, most notably **P-POTS** (a Pareto-optimal unbiased masking rate sampler) and **MIRROR** (complementary, negatively correlated masking), alongside the standard training procedure that samples masking rates uniformly. Together, these methods make diffusion language model training (including **LLaDA** and **MMaDA**) substantially more effective and stable. It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) and [**MMaDA**](https://github.com/Gen-Verse/MMaDA) code vendored and mostly intact.
 
 
 <p align="center">
@@ -302,7 +300,7 @@ pytest -q
 
 ## 🙏🏻 Acknowledgements & license
 
-The LLaDA/ subtree is vendored from the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) repository. The framework and glue code in src/mdm are intended to be small and easy to adapt for your own diffusion-LM experiments. We thank the original authors for their open-source contributions.
+The LLaDA/ and MMaDA/ subtrees are vendored from the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) and [**MMaDA**](https://github.com/Gen-Verse/MMaDA) repository. The framework and glue code in src/mdm are intended to be small and easy to adapt for your own diffusion-LM experiments. We thank the original authors for their open-source contributions.
 
 ## ⭐️ Citation
 

@@ -193,7 +193,7 @@ PYTHONPATH=src:. python -m mdm.train \
 
 #### Multi-GPU training (Accelerate / DeepSpeed)
 
-The LLaDA+ runner is built on 🤗 Accelerate. For multi-GPU training, use `accelerate launch`.
+The LLaDA+ runner is built on Accelerate. For multi-GPU training, use `accelerate launch`.
 
 Example Accelerate config:
 

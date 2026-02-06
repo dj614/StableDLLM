@@ -14,6 +14,7 @@ def forward_process(
     attention_mask: Optional[torch.Tensor],
     labels: torch.Tensor,
     train_mode: str = "Normal",
+    mask_token_id: int = MASK_TOKEN_ID,
     *,
     fixed_t: Optional[torch.Tensor] = None,
     iw_t: Optional[torch.Tensor] = None,
@@ -49,14 +50,14 @@ def forward_process(
     bern1 = torch.rand((B, L), device=device)
     mask1 = (bern1 < p_mask) & eligible
     noisy1 = input_ids.clone()
-    noisy1[mask1] = MASK_TOKEN_ID
+    noisy1[mask1] = mask_token_id
 
     noisy2 = None
     if train_mode == "MIRROR":
         bern2 = torch.rand((B, L), device=device)
         mask2 = (bern2 < p_mask) & eligible
         noisy2 = input_ids.clone()
-        noisy2[mask2] = MASK_TOKEN_ID
+        noisy2[mask2] = mask_token_id
 
     if iw_t is None:
         iw_t = torch.ones((B,), device=device)

@@ -17,6 +17,7 @@ def batched_loss_for_backpropagate(
     p_mask: torch.Tensor,
     iw_t: torch.Tensor,
     eligible: torch.Tensor,
+    mask_token_id: int = MASK_TOKEN_ID,
     *,
     train: bool,
     pad_id: int,
@@ -26,7 +27,7 @@ def batched_loss_for_backpropagate(
     """Compute masked-token cross-entropy loss with diffusion weighting."""
     logits = model(noisy_ids, attention_mask=attn_mask).logits  # [B, L, V]
 
-    mask_tok = (noisy_ids == MASK_TOKEN_ID) & eligible
+    mask_tok = (noisy_ids == mask_token_id) & eligible
     if not mask_tok.any():
         return torch.tensor(0.0, device=input_ids.device, dtype=torch.float32)
 

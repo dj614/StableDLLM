@@ -40,15 +40,27 @@ def train(args):
     device = accelerator.device
     gb = args.batch_size_per_gpu * args.grad_accum * accelerator.num_processes
 
-    model_path = "GSAI-ML/LLaDA-8B-Instruct"
+    # model/tokenizer paths
+    model_path = getattr(args, "model_path", None)
+    if model_path is None:
+        model_path = "GSAI-ML/LLaDA-8B-Instruct" if args.model == "llada" else None
+    if model_path is None:
+        raise ValueError("Please set --model_path when args.model != 'llada'")
+
+    tokenizer_path = getattr(args, "tokenizer_path", None) or model_path
 
     tokenizer = AutoTokenizer.from_pretrained(
-        model_path,
+        tokenizer_path,
         padding_side="right",
         use_fast=True,
         trust_remote_code=True,
     )
-    pad_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+
+    pad_id = getattr(args, "pad_token_id", None)
+    if pad_id is None:
+        pad_id = tokenizer.pad_token_id or tokenizer.eos_token_id
+    if pad_id is None:
+        raise ValueError("Tokenizer has no pad_token_id/eos_token_id; please set --pad_token_id")
 
     g_data = torch.Generator().manual_seed(args.seed)
 
@@ -77,13 +89,62 @@ def train(args):
     )
 
     # model
-    model = AutoModelForCausalLM.from_pretrained(
-        model_path,
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-    )
+    if args.model == "mmada":
+        try:
+            from transformers import AutoConfig
+            from MMaDA.models import MMadaConfig, MMadaModelLM
+        except Exception as e:
+            raise RuntimeError(
+                "Failed to import MMaDA. Make sure you run from the repo root "
+                "or add the repo root to PYTHONPATH so `import MMaDA` works."
+            ) from e
+
+        base_cfg = AutoConfig.from_pretrained(model_path, trust_remote_code=True).to_dict()
+
+        overrides = {}
+        for k in [
+            "llm_vocab_size",
+            "llm_model_path",
+            "codebook_size",
+            "num_vq_tokens",
+            "num_new_special_tokens",
+            "new_vocab_size",
+        ]:
+            v = getattr(args, k, None)
+            if v is None:
+                continue
+            if k.endswith("_path"):
+                overrides[k] = str(v)
+            else:
+                overrides[k] = int(v)
+
+        mmada_cfg = MMadaConfig(**{**base_cfg, **overrides})
+        model = MMadaModelLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16,
+            config=mmada_cfg,
+        )
+
+        if getattr(mmada_cfg, "new_vocab_size", None) is not None:
+            model.resize_token_embeddings(int(mmada_cfg.new_vocab_size))
+            if hasattr(model.config, "embedding_size"):
+                model.config.embedding_size = model.config.vocab_size
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16,
+        )
+
     if getattr(model.config, "is_decoder", None):
         model.config.is_decoder = False
+
+    # prefer explicit CLI arg, then HF config, then repo default
+    mask_token_id = getattr(args, "mask_token_id", None)
+    if mask_token_id is None:
+        mask_token_id = getattr(model.config, "mask_token_id", MASK_TOKEN_ID)
+    mask_token_id = int(mask_token_id)
 
     # optimizer
     optimizer = DeepSpeedCPUAdam(model.parameters(), lr=args.lr, weight_decay=0.1)
@@ -192,10 +253,11 @@ def train(args):
                     eam,
                     elbls,
                     args.train_mode,
+                    mask_token_id=mask_token_id,
                     fixed_t=fixed_t,
                     iw_t=iw_t,
                 )
-                if not (noisy1 == MASK_TOKEN_ID).any():
+                if not (noisy1 == mask_token_id).any():
                     continue
 
                 loss = batched_loss_for_backpropagate(
@@ -205,6 +267,7 @@ def train(args):
                     p_mask,
                     iw_t,
                     eligible,
+                    mask_token_id=mask_token_id,
                     train=False,
                     pad_id=pad_id,
                     attn_mask=eam,
@@ -249,11 +312,12 @@ def train(args):
                 am,
                 lbls,
                 args.train_mode,
+                mask_token_id=mask_token_id,
                 fixed_t=fixed_t,
                 iw_t=iw_t,
             )
-            has_mask1 = (noisy1 == MASK_TOKEN_ID).any()
-            has_mask2 = (noisy2 == MASK_TOKEN_ID).any() if noisy2 is not None else False
+            has_mask1 = (noisy1 == mask_token_id).any()
+            has_mask2 = (noisy2 == mask_token_id).any() if noisy2 is not None else False
 
             if args.train_mode == "Normal":
                 if not has_mask1:
@@ -270,6 +334,7 @@ def train(args):
                     p_mask,
                     iw_t,
                     eligible,
+                    mask_token_id=mask_token_id,
                     train=True,
                     debug={},
                     pad_id=pad_id,
@@ -284,6 +349,7 @@ def train(args):
                     p_mask,
                     iw_t,
                     eligible,
+                    mask_token_id=mask_token_id,
                     train=True,
                     debug={},
                     pad_id=pad_id,
@@ -296,6 +362,7 @@ def train(args):
                     p_mask,
                     iw_t,
                     eligible,
+                    mask_token_id=mask_token_id,
                     train=True,
                     debug={},
                     pad_id=pad_id,

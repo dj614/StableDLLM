@@ -74,7 +74,7 @@ pip install pyyaml
 
 Below, we use LLaDA to illustrate how to use our repository. MMaDA can be used in the same way.
 
-### 1) Data preprocessing / preparation (example: GSM8K)
+### 1) Data preprocessing / preparation (example: [**GSM8K**](https://huggingface.co/datasets/openai/gsm8k))
 
 Training uses a processed JSONL format (see **Data format** below). The repo provides preprocessors under `src/tools/preprocess/train/`.
 

@@ -279,7 +279,7 @@ PYTHONPATH=src:. python -m mdm.eval.harness \
 
 The task pack (`LLaDA/llada/tasks/specs.py`) will merge pred and gt by id (preferred) or index.
 
-## Development & tests
+## 🧪 Development & tests
 
 Run the lightweight smoke tests:
 

@@ -1,22 +1,44 @@
+import argparse
+import os
+import time
+import re
+
 import torch
 import numpy as np
 import gradio as gr
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModel
-import time
-import re
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print(f"Using device: {device}")
+from model_utils import DEFAULT_LLADA_INSTRUCT, load_model_and_tokenizer, resolve_mask_id
 
-# Load model and tokenizer
-tokenizer = AutoTokenizer.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_remote_code=True)
-model = AutoModel.from_pretrained('GSAI-ML/LLaDA-8B-Instruct', trust_remote_code=True,
-                                  torch_dtype=torch.bfloat16).to(device).eval()
+# Globals (initialized in `main()` / `init_model_and_tokenizer()`)
+MODEL_NAME_OR_PATH = None
+device = None
+model = None
+tokenizer = None
 
-# Constants
 MASK_TOKEN = "[MASK]"
-MASK_ID = 126336  # The token ID of [MASK] in LLaDA
+MASK_ID = None
+
+
+def init_model_and_tokenizer(model_name_or_path: str, *, device_name: str | None = None, dtype: str = "bf16", trust_remote_code: bool = True, mask_id: int | None = None):
+    """Load a checkpoint (LLaDA/MMaDA) and resolve special token ids."""
+    global MODEL_NAME_OR_PATH, device, model, tokenizer, MASK_TOKEN, MASK_ID
+
+    MODEL_NAME_OR_PATH = model_name_or_path
+    model, tokenizer, device = load_model_and_tokenizer(
+        model_name_or_path,
+        device=device_name,
+        dtype=dtype,
+        trust_remote_code=trust_remote_code,
+    )
+
+    # Prefer tokenizer-provided mask token/string when available.
+    MASK_TOKEN = getattr(tokenizer, "mask_token", None) or "[MASK]"
+    MASK_ID = resolve_mask_id(tokenizer, model, override=mask_id)
+
+    print(f"Using device: {device}")
+    print(f"Loaded model: {MODEL_NAME_OR_PATH}")
+    print(f"Resolved mask_id: {MASK_ID}  |  mask_token: {MASK_TOKEN!r}")
 
 def parse_constraints(constraints_text):
     """Parse constraints in format: 'position:word, position:word, ...'"""
@@ -519,5 +541,28 @@ def create_chatbot_demo():
 
 # Launch the demo
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Gradio demo for LLaDA/MMaDA-style checkpoints")
+    parser.add_argument(
+        "--model_name_or_path",
+        type=str,
+        default=os.environ.get("MADA_MODEL_NAME_OR_PATH", DEFAULT_LLADA_INSTRUCT),
+        help="HF model id or local path",
+    )
+    parser.add_argument("--device", type=str, default=os.environ.get("MADA_DEVICE", None))
+    parser.add_argument("--dtype", type=str, default=os.environ.get("MADA_DTYPE", "bf16"), choices=["bf16", "fp16", "fp32"])
+    parser.add_argument("--mask_id", type=int, default=int(os.environ["MADA_MASK_ID"]) if os.environ.get("MADA_MASK_ID") else None)
+    parser.add_argument("--no_trust_remote_code", action="store_true")
+    parser.add_argument("--share", action="store_true", help="Pass `--share` to Gradio")
+
+    args = parser.parse_args()
+
+    init_model_and_tokenizer(
+        args.model_name_or_path,
+        device_name=args.device,
+        dtype=args.dtype,
+        trust_remote_code=not args.no_trust_remote_code,
+        mask_id=args.mask_id,
+    )
+
     demo = create_chatbot_demo()
-    demo.queue().launch(share=True)
+    demo.queue().launch(share=args.share)

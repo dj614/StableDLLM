@@ -24,7 +24,7 @@
 ## 🔥 News
 
 - **[2026.02.09]** We released the codebase.
-- **[2026.01.26]** Our paper was accepted to ICLR 2026.
+- **[2026.01.25]** Our paper was accepted to ICLR 2026.
 - **[2025.11.22]** We posted our paper on [arXiv:2511.18159](https://arxiv.org/abs/2511.18159)
 
 ---

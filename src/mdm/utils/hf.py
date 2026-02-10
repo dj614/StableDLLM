@@ -23,12 +23,3 @@ def enable_hf_mirror_china() -> None:
 def maybe_enable_hf_mirror_china(enabled: bool) -> None:
     if enabled:
         enable_hf_mirror_china()
-
-
-# Backward-compatible aliases used by mdm.train.*
-def enable_hf_mirror() -> None:
-    enable_hf_mirror_china()
-
-
-def maybe_enable_hf_mirror(enabled: bool) -> None:
-    maybe_enable_hf_mirror_china(enabled)

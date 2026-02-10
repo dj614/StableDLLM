@@ -41,15 +41,17 @@ def _repo_root() -> Path:
 
 
 def _default_base_config() -> Path:
-    return _repo_root() / "src" / "configs" / "mdm" / "train_base.yaml"
+    # Default to the LLaDA+ base config. Users can switch to MMaDA+ by passing
+    # --config src/configs/mdm/train_mmada_base.yaml.
+    return _repo_root() / "src" / "configs" / "mdm" / "train_llada_base.yaml"
 
 
 def _apply_hf_mirror(china: bool) -> None:
     """Optionally enable the Hugging Face mirror used in the original code."""
 
-    from mdm.utils.hf import maybe_enable_hf_mirror
+    from mdm.utils.hf import maybe_enable_hf_mirror_china
 
-    maybe_enable_hf_mirror(bool(china))
+    maybe_enable_hf_mirror_china(bool(china))
 
 
 def _engine_dispatch(engine: str):
@@ -72,7 +74,7 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help=(
             "Path to a YAML config. Can be specified multiple times (base + overlays). "
-            "If omitted, uses src/configs/mdm/train_base.yaml (single-file). For base+overlay layering, use src/configs/mdm/train_llada_base.yaml + LLaDA/configs/llada_*.yaml."
+            "If omitted, uses src/configs/mdm/train_llada_base.yaml. For base+overlay layering, use src/configs/mdm/train_llada_base.yaml + LLaDA/configs/llada_*.yaml (or MMaDA/configs/mmada_*.yaml)."
         ),
     )
     ap.add_argument(

@@ -30,8 +30,10 @@ def _flatten_train_cfg(cfg: Mapping[str, Any]) -> Dict[str, Any]:
     train = cfg.get("train")
     if isinstance(train, Mapping):
         return dict(train)
-    # Backward compatible: allow a flat config.
-    return dict(cfg)
+    raise ValueError(
+        "Invalid config: expected a 'train' mapping. "
+        "(Old flat configs are no longer supported; please nest keys under train: ...)"
+    )
 
 
 def _fill_defaults(a: MutableMapping[str, Any]) -> None:

@@ -23,7 +23,7 @@ def main() -> None:
     from mdm.train.main import main as train_main
 
     root = _repo_root()
-    base = root / "src" / "configs" / "mdm" / "base" / "train_llada_plus.yaml"
+    base = root / "src" / "configs" / "mdm" / "train_llada_base.yaml"
     overlay = root / "LLaDA" / "configs" / "llada_gsm8k.yaml"
 
     buf = io.StringIO()

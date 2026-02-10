@@ -49,20 +49,10 @@ def main():
         default="GSAI-ML/LLaDA-8B-Instruct",
         help="Tokenizer name/path (HF repo id or local path). Must match the tokenizer used in training.",
     )
-    ap.add_argument(
-        "--model_path",
-        type=str,
-        default=None,
-        help="[DEPRECATED] Alias for --tokenizer_path (kept for backward compatibility).",
-    )
     ap.add_argument("--max_num", type=int, default=5000)
     ap.add_argument("--max_len", type=int, default=8192)
     ap.add_argument("--china", action="store_true")
     args = ap.parse_args()
-
-    # Backward-compat: old scripts used --model_path
-    if args.model_path:
-        args.tokenizer_path = args.model_path
 
     maybe_enable_hf_mirror_china(args.china)
 

@@ -40,7 +40,7 @@ train:
   # Data
   train_data_path: null
   max_len: 4096
-  epochs: 1
+  epochs: 5
   train_ratio: 0.9
 
   # Optim
@@ -53,7 +53,7 @@ train:
   eval_steps: null
 
   save_strategy: last
-  save_steps: 100
+  save_steps: 200
 
   output_dir: null
   logging_steps: 5

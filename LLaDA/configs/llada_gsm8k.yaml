@@ -6,5 +6,9 @@
 
 train:
   task: gsm8k
-  # Optional: explicit data path (runner also defaults to ./data/train/{task}.jsonl)
   train_data_path: ./data/train/gsm8k.jsonl
+  train_mode: MIRROR
+  PPOTS: True
+  # e.g. 1 node with 8 gpus: global_batch_size = 8 * 4 * 1 = 32
+  batch_size_per_gpu: 4
+  grad_accum: 1

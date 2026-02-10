@@ -12,7 +12,7 @@
   <i><b> <img src="https://img.alicdn.com/imgextra/i2/O1CN01FPcQDy1WTPjPX6IH9_!!6000000002789-2-tps-96-96.png" width="16px"  style="vertical-align: middle;"> Qwen Large Model Application Team, Alibaba</b></i>
 </p>
 
-**StableDLLM** is the reference codebase for our work on stabilizing masked diffusion model (MDM) post-training. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction recipes, most notably **P-POTS** (a Pareto-optimal unbiased masking rate sampler) and **MIRROR** (complementary, negatively correlated masking), alongside the standard training procedure that samples masking rates uniformly. Together, these methods make diffusion language model training (including **LLaDA** and **MMaDA**) substantially more effective and stable. It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) and [**MMaDA**](https://github.com/Gen-Verse/MMaDA) code vendored and mostly intact.
+**StableDLLM** is the codebase for our work on stabilizing masked diffusion model (MDM) supervised fine-tuning. Building on a variance decomposition of MDM training into **masking pattern noise (A)**, **masking rate noise (B)**, and **data noise (C)**, this repo implements practical variance-reduction methods, most notably **P-POTS** (a Pareto-optimal unbiased masking rate sampler) and **MIRROR** (complementary, negatively correlated masking), alongside the standard training procedure. Together, these methods make diffusion language model training (including **LLaDA** and **MMaDA**) substantially more effective and stable. It provides a lightweight “framework layer” for configuration, training, and evaluation—while keeping the upstream [**LLaDA**](https://github.com/ML-GSAI/LLaDA) and [**MMaDA**](https://github.com/Gen-Verse/MMaDA) code vendored and mostly intact.
 
 
 <p align="center">
@@ -74,11 +74,11 @@ pip install pyyaml
 
 Below, we use LLaDA to illustrate how to use our repository. MMaDA can be used in the same way.
 
-### 1) Data preprocessing / preparation (example: [**GSM8K**](https://huggingface.co/datasets/openai/gsm8k))
+### 1) Training Data Preparation
 
-Training uses a processed JSONL format (see **Data format** below). The repo provides preprocessors under `src/tools/preprocess/train/`.
+Training uses a processed JSONL format (see **Data format** below). The repo provides preprocessors under `src/tools/preprocess/train`.
 
-Example for GSM8K:
+Example for [**GSM8K**](https://huggingface.co/datasets/openai/gsm8k):
 
 ```bash
 PYTHONPATH=src:. python src/tools/preprocess/train/preprocess_gsm8k_sft.py \
@@ -86,9 +86,7 @@ PYTHONPATH=src:. python src/tools/preprocess/train/preprocess_gsm8k_sft.py \
   --tokenizer_path <YOUR_TOKENIZER>
 ```
 
-#### Data format
-
-**Training (processed JSONL)**
+#### Training Data format
 
 The training engine (`mdm.engines.llada_plus`) reads a JSONL where each line is a dict:
 
@@ -160,41 +158,42 @@ Common knobs:
   - `train.output_dir`: log/ckpt directory (default: `./logs/{task}`)
 - **Diffusion / sampling**
   - `train.train_mode`: `Normal` or `MIRROR`
-  - `train.PPOTS`: enable IS-on-t training logic
+  - `train.PPOTS`: enable PPOTS training logic
   - `train.p_model`: importance sampling model (`EPR`, `AP`, ...)
   - plus various IS-related sampling counts and caps
+
+You can pass multiple configs to mdm.train and the later one will override the previous ones; you can also pass --set to override keys.
 
 To inspect the final merged config without training:
 
 ```bash
 PYTHONPATH=src:. python -m mdm.train \
-  --config src/configs/mdm/base/train_llada_plus.yaml \
+  --config src/configs/mdm/train_llada_base.yaml \
   --config LLaDA/configs/llada_gsm8k.yaml \
   --dump_config
 ```
 
 ---
 
-### 4) Train (including multi-GPU / multi-node)
+### 4) Train
 
 #### Train with the unified MDM entrypoint
 
-The training CLI supports multiple YAML files (base + overlays). A typical run uses:
+The training CLI supports multiple YAML files (base + overlays). You can pass multiple configs to mdm.train and the later one will override the previous ones; you can also pass --set to override keys. A run can use:
 
-- base: `src/configs/mdm/base/train_llada_plus.yaml`
+- base: `src/configs/mdm/train_llada_base.yaml`
 - overlay: `LLaDA/configs/llada_gsm8k.yaml` (task-specific settings)
+- set: override certain keys
 
+For training on single node:
 ```bash
 PYTHONPATH=src:. python -m mdm.train \
-  --config src/configs/mdm/base/train_llada_plus.yaml \
+  --config src/configs/mdm/train_llada_base.yaml \
   --config LLaDA/configs/llada_gsm8k.yaml \
-  --auto_import LLaDA.llada.register \
   --set train.output_dir=./outputs/llada_plus_gsm8k
 ```
 
-#### Multi-GPU training (Accelerate / DeepSpeed)
-
-The LLaDA+ runner is built on Accelerate. For multi-GPU training, use `accelerate launch`.
+For multi-GPU training, the LLaDA+ runner is built on Accelerate. Use `accelerate launch`.
 
 Example Accelerate config:
 
@@ -209,9 +208,8 @@ Example launch:
 ```bash
 accelerate launch --config_file src/configs/accelerate/deepspeed_zero2.yaml \
   -m mdm.train \
-  --config src/configs/mdm/base/train_llada_plus.yaml \
+  --config src/configs/mdm/train_llada_base.yaml \
   --config LLaDA/configs/llada_gsm8k.yaml \
-  --auto_import LLaDA.llada.register \
   --set train.output_dir=./outputs/llada_plus_gsm8k_ds
 ```
 
@@ -226,7 +224,7 @@ PYTHONPATH=src:. python -m llada.cli.main infer \
   --task gsm8k \
   --out_file ./outputs/preds_gsm8k.jsonl \
   --model_name GSAI-ML/LLaDA-8B-Instruct \
-  --steps 128 --gen_length 128
+  --steps 128 --gen_length 128 --block_length 32
 ```
 
 #### Inference / scoring JSONL

@@ -1,28 +1,28 @@
-# Base training config for the MDM framework (engine = llada_plus).
+# Base training config for the MDM framework (engine = mmada_plus).
 #
 # This file is intended to be task-agnostic and shared across masked-diffusion
-# tasks that reuse the LLaDA+ training runner.
+# tasks that reuse the MMaDA+ training runner.
 #
 # Typical usage (base + overlay):
 #
 #   PYTHONPATH=src:. python -m mdm.train \
-#       --config src/configs/mdm/train_llada_base.yaml \
-#       --config LLaDA/configs/llada_gsm8k.yaml
+#       --config src/configs/mdm/train_mmada_base.yaml \
+#       --config MMaDA/configs/mmada_t2i.yaml
 
-engine: llada_plus
+engine: mmada_plus
 
 # Optional global mirror toggle. The runner also accepts train.china.
 china: false
 
 train:
-  # Required fields for the llada_plus runner.
+  # Required fields for the mmada_plus runner.
   seed: 42
-  task: null  # provided by task overlays under LLaDA/configs/ (or via --set)
+  task: null  # provided by task overlays under MMaDA/configs/ (or via --set)
   batch_size_per_gpu: 1
   grad_accum: 1
 
-  # Runner options (see src/mdm/engines/llada_plus/cli/train.py)
-  model: llada
+  # Runner options (see src/mdm/engines/mmada_plus/cli/train.py)
+  model: mmada
   train_mode: Normal
   PPOTS: false
   p_model: EPR

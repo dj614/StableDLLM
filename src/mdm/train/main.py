@@ -16,7 +16,7 @@ Usage examples:
 
   # Run training using the legacy llada_plus runner
   PYTHONPATH=src:. python -m mdm.train \
-      --config src/configs/mdm/base/train_llada_plus.yaml \
+      --config src/configs/mdm/train_llada_base.yaml \
       --config LLaDA/configs/llada_gsm8k.yaml \
       --set train.seed=1 \
       --auto_import LLaDA.llada.register
@@ -66,7 +66,7 @@ def _parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         default=None,
         help=(
             "Path to a YAML config. Can be specified multiple times (base + overlays). "
-            "If omitted, uses src/configs/mdm/train_base.yaml (single-file). For base+overlay layering, use src/configs/mdm/base/train_llada_plus.yaml + LLaDA/configs/llada_*.yaml."
+            "If omitted, uses src/configs/mdm/train_base.yaml (single-file). For base+overlay layering, use src/configs/mdm/train_llada_base.yaml + LLaDA/configs/llada_*.yaml."
         ),
     )
     ap.add_argument(

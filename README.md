@@ -224,6 +224,7 @@ PYTHONPATH=src:. python -m llada.cli.main infer \
   --task gsm8k \
   --out_file ./outputs/preds_gsm8k.jsonl \
   --model_name GSAI-ML/LLaDA-8B-Instruct \
+  --temperature 0.0 \
   --steps 128 --gen_length 128 --block_length 32
 ```
 

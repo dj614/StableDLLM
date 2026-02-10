@@ -2,7 +2,7 @@
 
 Prefer:
 - LLaDA.llada for the task pack (tasks + metrics).
-- mdm.engines.llada_plus for training.
+- mdm.engines for training.
 """
 
 from __future__ import annotations

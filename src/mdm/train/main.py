@@ -7,7 +7,7 @@ dotted-key overrides) and dispatch to a training engine selected by config.
 
 Currently supported engines:
 - ``llada_plus``: masked-language diffusion runner under
-  ``src/mdm/engines/llada_plus``.
+  ``src/mdm/engines``.
 - ``mmada_plus``: MMaDA variant (LLaDA runner + extended tokenizer), dispatched
   via ``mdm.train.entrypoints.mmada_plus``.
 

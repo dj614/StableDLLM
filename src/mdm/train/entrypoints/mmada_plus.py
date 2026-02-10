@@ -1,12 +1,11 @@
 """Training engine entrypoint: MMaDA+ masked diffusion runner.
 
 This engine is intentionally *thin*: it reuses the implementation under
-``src/mdm/engines/llada_plus`` but sets sensible defaults for MMaDA.
+``src/mdm/engines`` but sets sensible defaults for MMaDA.
 
 Why this exists
 ---------------
-MMaDA is trained by continuing from an LLaDA checkpoint while extending the
-tokenizer / embeddings. The runner already supports ``args.model == "mmada"``;
+MMaDA is a LLaDA-like model. The shared runner supports ``args.model == "mmada"``;
 this entrypoint simply makes it selectable via ``engine: mmada_plus``.
 
 Config contract
@@ -19,7 +18,7 @@ The merged config should look like:
       task: gsm8k
       batch_size_per_gpu: 1
       grad_accum: 1
-      ... (fields compatible with mdm.engines.llada_plus.runner.train)
+      ... (fields compatible with mdm.engines.runner.train)
 
 The runner is invoked with an ``argparse.Namespace`` built from ``train``.
 """
@@ -39,7 +38,7 @@ def _flatten_train_cfg(cfg: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def _fill_defaults(a: MutableMapping[str, Any]) -> None:
-    # Mirror the defaults/normalization in mdm.engines.llada_plus.cli.train.parse_args.
+    # Mirror the defaults/normalization in mdm.engines.cli.train.parse_args.
     # Key difference from llada_plus: default model is mmada.
     if a.get("model") is None:
         a["model"] = "mmada"
@@ -74,7 +73,7 @@ def train_from_config(cfg: Mapping[str, Any]) -> Any:
     """Dispatch training using the mmada_plus engine."""
 
     # Import lazily so `--dump_config` remains lightweight.
-    from mdm.engines.llada_plus.runner import train as _train
+    from mdm.engines.runner import train as _train
 
     train_cfg = _flatten_train_cfg(cfg)
 

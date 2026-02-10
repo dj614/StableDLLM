@@ -8,6 +8,8 @@ dotted-key overrides) and dispatch to a training engine selected by config.
 Currently supported engines:
 - ``llada_plus``: masked-language diffusion runner under
   ``src/mdm/engines/llada_plus``.
+- ``mmada_plus``: MMaDA variant (LLaDA runner + extended tokenizer), dispatched
+  via ``mdm.train.entrypoints.mmada_plus``.
 
 Usage examples:
 
@@ -53,6 +55,10 @@ def _apply_hf_mirror(china: bool) -> None:
 def _engine_dispatch(engine: str):
     if engine == "llada_plus":
         from mdm.train.entrypoints.llada_plus import train_from_config
+
+        return train_from_config
+    if engine == "mmada_plus":
+        from mdm.train.entrypoints.mmada_plus import train_from_config
 
         return train_from_config
     raise ValueError(f"Unknown engine: {engine}")

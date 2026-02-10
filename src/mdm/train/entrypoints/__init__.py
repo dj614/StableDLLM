@@ -4,6 +4,9 @@ Each engine exposes a ``train_from_config(cfg)`` function.
 
 Step 7 starts with a single engine (``llada_plus``) which wraps the runner
 under :mod:`mdm.engines.llada_plus`.
+
+Additional engines can be added as thin wrappers that reuse an existing runner
+with different defaults (e.g. ``mmada_plus``).
 """
 
 from __future__ import annotations

@@ -12,12 +12,7 @@ from transformers import AutoModel, AutoTokenizer
 
 from mdm.utils.io import iter_jsonl, write_jsonl
 
-try:
-    # The original sampler lives in the top-level `LLaDA/` package in this repo.
-    from LLaDA.generate import generate  # type: ignore
-except Exception:  # pragma: no cover
-    # Fallback for alternative layouts where `generate` is importable directly.
-    from generate import generate  # type: ignore
+from LLaDA.generate import generate
 
 
 DEFAULT_MODEL_NAME = "GSAI-ML/LLaDA-8B-Instruct"

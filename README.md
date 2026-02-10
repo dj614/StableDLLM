@@ -215,12 +215,12 @@ accelerate launch --config_file src/configs/accelerate/deepspeed_zero2.yaml \
 
 ---
 
-### 5) Inference (legacy `llada` CLI)
+### 5) Inference (model pack CLI)
 
-A small convenience CLI lives at `src/llada/cli/main.py`:
+A small convenience CLI lives at `src/modelpacks/llada/cli/main.py`:
 
 ```bash
-PYTHONPATH=src:. python -m llada.cli.main infer \
+PYTHONPATH=src:. python -m modelpacks.llada.cli.main infer \
   --task gsm8k \
   --out_file ./outputs/preds_gsm8k.jsonl \
   --model_name GSAI-ML/LLaDA-8B-Instruct \
@@ -230,7 +230,7 @@ PYTHONPATH=src:. python -m llada.cli.main infer \
 
 #### Inference / scoring JSONL
 
-The legacy `llada infer` command writes one dict per sample, e.g.:
+The `infer` command writes one dict per sample, e.g.:
 
 ```json
 {
@@ -242,16 +242,16 @@ The legacy `llada infer` command writes one dict per sample, e.g.:
 }
 ```
 
-The scoring helpers (`llada score`) use robust answer extraction heuristics in `LLaDA/llada/eval/`.
+The scoring helpers use robust answer extraction heuristics in `LLaDA/llada/eval/`.
 
 ---
 
 ### 6) Evaluation
 
-#### Score predictions (legacy `llada` CLI)
+#### Score predictions (model pack CLI)
 
 ```bash
-PYTHONPATH=src:. python -m llada.cli.main score \
+PYTHONPATH=src:. python -m modelpacks.llada.cli.main score \
   --task gsm8k \
   --pred_jsonl ./outputs/preds_gsm8k.jsonl
 ```

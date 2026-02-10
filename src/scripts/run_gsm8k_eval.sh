@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Minimal reproducible GSM8K eval using the unified CLI.
+# Minimal reproducible GSM8K eval using the model pack CLI.
 # Usage:
 #   bash scripts/run_gsm8k_eval.sh /path/to/checkpoint 0 1 2 3
 #
@@ -30,7 +30,7 @@ PRED_JSONL="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.jsonl"
 METRICS_JSON="${OUT_DIR}/predictions_gsm8k_${SUFFIX}.metrics.json"
 
 PYTHONPATH="$(pwd)/src:${PYTHONPATH:-}" \
-  python -m llada.cli.main infer \
+  python -m modelpacks.llada.cli.main infer \
     --task gsm8k --split test \
     --checkpoint_path "${CKPT}" \
     --device_ids "${DEVICE_IDS[@]}" \
@@ -39,7 +39,7 @@ PYTHONPATH="$(pwd)/src:${PYTHONPATH:-}" \
     --out_file "${PRED_JSONL}"
 
 PYTHONPATH="$(pwd)/src:${PYTHONPATH:-}" \
-  python -m llada.cli.main score \
+  python -m modelpacks.llada.cli.main score \
     --task gsm8k \
     --pred_jsonl "${PRED_JSONL}" \
     --out_metrics "${METRICS_JSON}"

@@ -10,7 +10,8 @@ They support two common prediction formats:
 2) **Harness**: predictions and ground truth are separate JSONL files. Records
    are joined by ``id`` (preferred) or ``index`` as a fallback.
 
-Step 6 goal: migrate LLaDA-specific dataset/eval adapters out of ``src/llada`` and
+Step 6 goal: migrate LLaDA-specific dataset/eval adapters out of
+``src/modelpacks/llada`` and
 into this task pack, so the ``mdm`` framework stays task-agnostic.
 """
 

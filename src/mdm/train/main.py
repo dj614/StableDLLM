@@ -8,15 +8,15 @@ dotted-key overrides) and dispatch to a training engine selected by config.
 Currently supported engines:
 - ``llada_plus``: masked-language diffusion runner under
   ``src/mdm/engines``.
-- ``mmada_plus``: MMaDA variant (LLaDA runner + extended tokenizer), dispatched
-  via ``mdm.train.entrypoints.mmada_plus``.
+- ``mmada_plus``: MMaDA variant, dispatched via
+  ``mdm.train.entrypoints.mmada_plus``.
 
 Usage examples:
 
   # Dump the merged config (no training)
   PYTHONPATH=src:. python -m mdm.train --dump_config
 
-  # Run training using the legacy llada_plus runner
+  # Run training using the llada_plus engine
   PYTHONPATH=src:. python -m mdm.train \
       --config src/configs/mdm/train_llada_base.yaml \
       --config LLaDA/configs/llada_gsm8k.yaml \

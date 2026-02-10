@@ -184,12 +184,12 @@ def cmd_score(args: argparse.Namespace) -> None:
 def cmd_preprocess(args: argparse.Namespace) -> None:
     raise SystemExit(
         "preprocess has been moved to tools/preprocess/. "
-        "If you need a unified preprocessing pipeline, extend llada/cli/main.py."
+        "If you need a unified preprocessing pipeline, extend modelpacks/llada/cli/main.py."
     )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="llada")
+    p = argparse.ArgumentParser(prog="modelpacks.llada")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pi = sub.add_parser("infer", help="run inference and write predictions jsonl")

@@ -4,7 +4,7 @@ set -euo pipefail
 # Smoke test for the Step0-5 refactor scaffolding.
 #
 # This script sets PYTHONPATH to include both:
-#   - src/     (framework + legacy llada package)
+#   - src/     (framework + model pack CLIs)
 #   - repo root (LLaDA task pack)
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

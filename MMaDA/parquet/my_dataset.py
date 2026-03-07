@@ -205,7 +205,7 @@ class R2iDataset(IterableDataset):
             
             subdirs = subdirs[self.rank::self.world_size]
 
-            subdirs = ['/data_storage/lbw/datasets/laion-aesthetics-12m-images-2/00000']
+            subdirs = ['/path/to/datasets/laion-aesthetics-12m-images-2/00000']
             
             for subdir in subdirs:
                 all_files = glob.glob(os.path.join(subdir, "*.*"))
@@ -462,7 +462,7 @@ def image_transform_pad(sample, resolution=256, fill_color=(255, 255, 255)):
     return sample
 
 if __name__ == '__main__':
-    data_path = "/data_storage/shared/datasets/falcon-refinedweb/data/data/*.parquet"
+    data_path = "/path/to/datasets/falcon-refinedweb/data/data/*.parquet"
     dataset = RefinedWebDataset(
         data_path=data_path,
         max_length=8000,

@@ -1,6 +1,5 @@
 wandb:
   entity: null
-#  run_id: askkz9i2
   resume: 'auto'
 
 experiment:
@@ -42,24 +41,24 @@ dataset:
     combined_loader_mode: "max_size_cycle"
     params:
         train_t2i_shards_path_or_url: [     #
-                                        "/data_storage/shared/datasets/JourneyDB/train/imgs/data/train/imgs/{000..199}.tgz",
-                                        "/data_storage/shared/datasets/laion-aesthetics-12m/{00000..00999}.tar",
-                                        "/data_storage/shared/datasets/text-to-image-2M/data_512_2M"
+                                        "/path/to/datasets/JourneyDB/train/imgs/data/train/imgs/{000..199}.tgz",
+                                        "/path/to/datasets/laion-aesthetics-12m/{00000..00999}.tar",
+                                        "/path/to/datasets/text-to-image-2M/data_512_2M"
         ]
-        train_mmu_shards_path_or_url: [ "/data_storage/shared/datasets/SA-1B/sa_{000000..000999}.tar",  #
-                                        "/data_storage/shared/datasets/cc12m/raw/raw/{0000..0999}.tar",
-                                      "/data_storage/shared/datasets/laion-aesthetics-12m/{00000..00999}.tar" 
+        train_mmu_shards_path_or_url: [ "/path/to/datasets/SA-1B/sa_{000000..000999}.tar",  #
+                                        "/path/to/datasets/cc12m/raw/raw/{0000..0999}.tar",
+                                      "/path/to/datasets/laion-aesthetics-12m/{00000..00999}.tar"
         ]
-        train_lm_shards_path_or_url: "/data_storage/ty/shared/datasets/3-instruct-datasets/parquet/*.parquet"
+        train_lm_shards_path_or_url: "/path/to/datasets/3-instruct-datasets/parquet/*.parquet"
         add_caption_prompt: True
-        external_caption_path: "/data_storage/shared/datasets/SAM-LLaVA-Captions10M"
-        external_journeydb_caption_path: "/data_storage/shared/datasets/journeydb_anno/train_journeydb_anno.json"
-        external_laion12m_caption_path: "/data_storage/ty/datasets/laion-aesthetics-12m-images-2"
-        external_cc12m_caption_path: "/data_storage/shared/datasets/cc12m/new_captions"
-        external_text_to_image_2M_512_caption_path: "/data_storage/shared/datasets/text-to-image-2M/data_512_2M_captions"
+        external_caption_path: "/path/to/datasets/SAM-LLaVA-Captions10M"
+        external_journeydb_caption_path: "/path/to/datasets/journeydb_anno/train_journeydb_anno.json"
+        external_laion12m_caption_path: "/path/to/datasets/laion-aesthetics-12m-images-2"
+        external_cc12m_caption_path: "/path/to/datasets/cc12m/new_captions"
+        external_text_to_image_2M_512_caption_path: "/path/to/datasets/text-to-image-2M/data_512_2M_captions"
         validation_prompts_file: "validation_prompts/text2image_prompts.txt"
-        mmu_image_root: "/data_storage/ty/MMaDA/mmu_validation"
-        lm_chat_validation_jsonl: "/data_storage/ty/MMaDA/lm_chat_validation/questions.jsonl"
+        mmu_image_root: "/path/to/mmu_validation"
+        lm_chat_validation_jsonl: "/path/to/lm_chat_validation/questions.jsonl"
         shuffle_buffer_size: 1000
         num_workers: 32
         resolution: 512

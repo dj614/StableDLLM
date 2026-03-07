@@ -320,8 +320,8 @@ def get_transfer_index_dynamic(logits, temperature, remasking, mask_index, x, nu
 def main():
     device = 'cuda'
 
-    model = AutoModel.from_pretrained('/data_storage/shared/pretrained_models/LLaDA-1.5', trust_remote_code=True, torch_dtype=torch.bfloat16).to(device).eval()
-    tokenizer = AutoTokenizer.from_pretrained('/data_storage/shared/pretrained_models/LLaDA-1.5', trust_remote_code=True)
+    model = AutoModel.from_pretrained('/path/to/pretrained_models/LLaDA-1.5', trust_remote_code=True, torch_dtype=torch.bfloat16).to(device).eval()
+    tokenizer = AutoTokenizer.from_pretrained('/path/to/pretrained_models/LLaDA-1.5', trust_remote_code=True)
 
     prompt = "Lily can run 12 kilometers per hour for 4 hours. After that, she runs 6 kilometers per hour. How many kilometers can she run in 8 hours?"
 

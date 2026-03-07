@@ -1,6 +1,5 @@
 wandb:
   entity: null
-#  run_id: askkz9i2
   resume: 'auto'
 
 experiment:
@@ -26,7 +25,7 @@ model:
 
     mmada:
         tokenizer_path: "GSAI-ML/LLaDA-8B-Instruct"
-        pretrained_model_path: "path/to/your/checkpoint"
+        pretrained_model_path: "/path/to/checkpoints/mmada-training-stage3/checkpoint-210000/unwrapped_model"
         w_clip_vit: False
         new_vocab_size: 134656
         llm_vocab_size: 126464
@@ -42,31 +41,31 @@ dataset:
     und_type: "captioning"
     combined_loader_mode: "max_size_cycle"
     params:
-        train_t2i_shards_path_or_url: [ "/data_storage/shared/datasets/JourneyDB/train/imgs/data/train/imgs/{000..199}.tgz",
-                                        "/data_storage/shared/datasets/laion-aesthetics-12m-filter/{00000..00999}.tar",
-                                        # "/data_storage/shared/datasets/text-to-image-2M/data_512_2M/data_{000000..000046}.tar"
+        train_t2i_shards_path_or_url: [ "/path/to/datasets/JourneyDB/train/imgs/data/train/imgs/{000..199}.tgz",
+                                        "/path/to/datasets/laion-aesthetics-12m-filter/{00000..00999}.tar",
+                                        # "/path/to/datasets/text-to-image-2M/data_512_2M/data_{000000..000046}.tar"
         ]
-        train_mmu_shards_path_or_url: [ "/data_storage/shared/datasets/multimodal_cot/ai2d/new_images.tar",
-                                        "/data_storage/shared/datasets/multimodal_cot/clevr/images.tar",  
-                                        "/data_storage/shared/datasets/multimodal_cot/docvqa/images.tar",  
-                                        "/data_storage/shared/datasets/multimodal_cot/geo/images.tar",
-                                        "/data_storage/shared/datasets/laion-aesthetics-12m/{00000..00999}.tar",
+        train_mmu_shards_path_or_url: [ "/path/to/datasets/multimodal_cot/ai2d/new_images.tar",
+                                        "/path/to/datasets/multimodal_cot/clevr/images.tar",
+                                        "/path/to/datasets/multimodal_cot/docvqa/images.tar",
+                                        "/path/to/datasets/multimodal_cot/geo/images.tar",
+                                        "/path/to/datasets/laion-aesthetics-12m/{00000..00999}.tar",
         ]
-        train_lm_shards_path_or_url: "/data_storage/shared/datasets/3-cot-sft/parquet/*.parquet" 
+        train_lm_shards_path_or_url: "/path/to/datasets/3-cot-sft/parquet/*.parquet"
         add_caption_prompt: True
-        external_caption_path: "/data_storage/shared/datasets/SAM-LLaVA-Captions10M"
-        external_journeydb_caption_path: "/data_storage/shared/datasets/journeydb_anno/train_journeydb_anno.json"
-        external_laion12m_caption_path: "/data_storage/ty/datasets/laion-aesthetics-12m-images-2"
-        external_cc12m_caption_path: "/data_storage/shared/datasets/cc12m/new_captions"
-        external_text_to_image_2M_512_caption_path: "/data_storage/shared/datasets/text-to-image-2M/data_512_2M_captions"
-        external_ai2d_caption_path: "/data_storage/shared/datasets/multimodal_cot/ai2d/new_metadata.csv"
-        external_clevr_caption_path: "/data_storage/shared/datasets/multimodal_cot/clevr/metadata.csv"
-        external_docvqa_caption_path: "/data_storage/shared/datasets/multimodal_cot/docvqa/metadata.csv"
-        external_geo_caption_path: "/data_storage/shared/datasets/multimodal_cot/geo/metadata.csv"
+        external_caption_path: "/path/to/datasets/SAM-LLaVA-Captions10M"
+        external_journeydb_caption_path: "/path/to/datasets/journeydb_anno/train_journeydb_anno.json"
+        external_laion12m_caption_path: "/path/to/datasets/laion-aesthetics-12m-images-2"
+        external_cc12m_caption_path: "/path/to/datasets/cc12m/new_captions"
+        external_text_to_image_2M_512_caption_path: "/path/to/datasets/text-to-image-2M/data_512_2M_captions"
+        external_ai2d_caption_path: "/path/to/datasets/multimodal_cot/ai2d/new_metadata.csv"
+        external_clevr_caption_path: "/path/to/datasets/multimodal_cot/clevr/metadata.csv"
+        external_docvqa_caption_path: "/path/to/datasets/multimodal_cot/docvqa/metadata.csv"
+        external_geo_caption_path: "/path/to/datasets/multimodal_cot/geo/metadata.csv"
         validation_prompts_file: "validation_prompts/text2image_prompts.txt"
-        mmu_image_root: "/data_storage/ty/MMaDA/mmu_validation"
-        mmu_validation_prompts_file: "/data_storage/ty/MMaDA/mmu_validation/prompts.jsonl"
-        lm_chat_validation_jsonl: "/data_storage/ty/MMaDA/lm_chat_validation/questions.jsonl"
+        mmu_image_root: "/path/to/mmu_validation"
+        mmu_validation_prompts_file: "/path/to/mmu_validation/prompts.jsonl"
+        lm_chat_validation_jsonl: "/path/to/lm_chat_validation/questions.jsonl"
         shuffle_buffer_size: 1000
         num_workers: 32
         resolution: 512
@@ -119,5 +118,5 @@ training:
     mmu_coeff: 0.5
 
 validation:
-    quantative_prompts_file: "/data_storage/ty/MMaDA/validation_prompts/quantative.txt" 
+    quantative_prompts_file: "/path/to/validation_prompts/quantative.txt" 
     quantative_batch_size: 8

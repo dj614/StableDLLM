@@ -1017,8 +1017,8 @@ def quantative_images(
 ):
     logger.info("Quantative images...")
     model.eval()
-    clip_score_fn = partial(clip_score, model_name_or_path="/data_storage/shared/pretrained_models/")
-    image_reward_model = RM.load("/data_storage/shared/pretrained_models/ImageReward/ImageReward.pt")
+    clip_score_fn = partial(clip_score, model_name_or_path="/path/to/pretrained_models/")
+    image_reward_model = RM.load("/path/to/pretrained_models/ImageReward/ImageReward.pt")
     # read validation prompts from file
     with open(config.validation.quantative_prompts_file, "r") as f:
         validation_prompts = f.read().splitlines()

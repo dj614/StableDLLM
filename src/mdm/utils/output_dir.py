@@ -26,7 +26,7 @@ def _default_output_dir(args) -> str:
         suffix.append(mode.lower())
 
     suf = ("_" + "_".join(suffix)) if suffix else ""
-    return f"/root/workspace/checkpoints/seed{seed}_{model}_{task}{suf}"
+    return f"/path/to/checkpoints/seed{seed}_{model}_{task}{suf}"
 
 
 def make_output_dir_and_broadcast(args, accelerator):

@@ -462,8 +462,8 @@ def parse_args_scan():
 
 def parse_args_sync():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--src', type=str, default='/home/kenny/mmeval')
-    parser.add_argument('--tgt', type=str, default='/home/kenny/volc/mmeval')
+    parser.add_argument('--src', type=str, default='/path/to/mmeval')
+    parser.add_argument('--tgt', type=str, default='/path/to/volc/mmeval')
     parser.add_argument('--data', type=str, nargs='+')
     args, unknownargs = parser.parse_known_args()
     return args, unknownargs
